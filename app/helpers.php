@@ -1,30 +1,27 @@
 <?php
 
 if (!function_exists('successJSON')) {
-    function successJSON($content, $die = true)
+    function successJSON($content)
     {
-        wrapJSON('SUCCESS', $content, $die);
+        return wrapJSON('SUCCESS', $content);
     }
 }
 
 if (!function_exists('errorJSON')) {
-    function errorJSON($content, $die = true)
+    function errorJSON($content)
     {
-        wrapJSON('ERROR', $content, $die);
+        return wrapJSON('ERROR', $content);
     }
 }
 
 if (!function_exists('wrapJSON')) {
-    function wrapJSON($code, $content, $die = true)
+    function wrapJSON($code, $content)
     {
         $content = json_encode((object)$content);
         $content = substr($content, 1, strlen($content) - 1);
         $buffer = '{"code":"' . $code . '",' . $content;
 
-        echo $buffer;
-        if ($die) {
-            die;
-        }
+        return json_decode($buffer, true);
     }
 }
 
@@ -266,15 +263,25 @@ if (!function_exists('IsoRemoveRDV')) {
 if (!function_exists('_session')) {
     function _session($key = null, $default = null)
     {
+        session_start();
+
         if ($key === null) {
             return $_SESSION;
         }
 
         if (is_array($key)) {
             $_SESSION = array_merge($_SESSION, $key);
+            return null;
         }
 
         return $_SESSION[$key] ?? $default;
+    }
+}
+
+if (!function_exists('_user')) {
+    function _user()
+    {
+        return unserialize(_session('crm_user'), ['allowed_classes' => true]);
     }
 }
 

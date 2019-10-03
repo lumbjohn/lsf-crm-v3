@@ -103,7 +103,7 @@
                 dataType:'json',
                 success : function (resp) {
                     if (resp.code == 'SUCCESS') {
-                        location.href = 'index.php';
+                        location.href = 'contacts.php';
                     }
                     else
                     if (resp.code == 'ERROR')
