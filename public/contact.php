@@ -8,7 +8,7 @@ else {
 
 	$curusr = Contact::findOne(array('c.id_contact' => (int)$_GET['id_contact']));
 	if ($curusr) {
-		//$outuserlot = GridManager::getGrid('gwi_user_lottery', $_GET['id_user']); 
+		//$outuserlot = GridManager::getGrid('gwi_user_lottery', $_GET['id_user']);
 
 		if (CrmUser::isManager($currentUser) && ($curusr->id_team != $currentUser->id_team && !in_array($curusr->id_team, explode(',', $currentUser->teams))))
 			header('Location: contacts.php');
@@ -33,14 +33,14 @@ $zonetodis = (int)$curusr->cancel_update_team == 1 && (CrmUser::isTelepro($curre
 
 
 //TEST
-// $cookie_jar = 'cookietest.txt'; 
-// // log in 
-// $c = curl_init('https://admin.dossier-c2e.fr/login'); 
-// curl_setopt($c, CURLOPT_RETURNTRANSFER, 1); 
-// curl_setopt($c, CURLOPT_COOKIEJAR, $cookie_jar);  
+// $cookie_jar = 'cookietest.txt';
+// // log in
+// $c = curl_init('https://admin.dossier-c2e.fr/login');
+// curl_setopt($c, CURLOPT_RETURNTRANSFER, 1);
+// curl_setopt($c, CURLOPT_COOKIEJAR, $cookie_jar);
 // curl_setopt($ch, CURLOPT_COOKIEFILE, $cookie_jar);
-// $page = curl_exec($c); 
-// curl_close($c); 
+// $page = curl_exec($c);
+// curl_close($c);
 
 // $a = explode(' name="_csrf_token" value="', $page);
 // $a = explode('"', $a[1])[0];
@@ -57,7 +57,7 @@ $zonetodis = (int)$curusr->cancel_update_team == 1 && (CrmUser::isTelepro($curre
 // 	'_password' => 'YCHGXSPA'
 // );
 // curl_setopt($ch, CURLOPT_POST, true);
-// curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($pst)); 
+// curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($pst));
 // CURL_SETOPT($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:68.0) Gecko/20100101 Firefox/68.0');
 // //curl_setopt($ch, CURLOPT_POST, 1);
 // curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
@@ -75,7 +75,7 @@ $zonetodis = (int)$curusr->cancel_update_team == 1 && (CrmUser::isTelepro($curre
 // $headers[] = 'Upgrade-Insecure-Requests: 1';
 // //curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
 // curl_setopt($ch, CURLOPT_COOKIEFILE, $cookie_jar);
-// //curl_setopt($c, CURLOPT_COOKIEJAR, $cookie_jar);  
+// //curl_setopt($c, CURLOPT_COOKIEJAR, $cookie_jar);
 // //curl_setopt($ch, CURLOPT_NOBODY  , true);
 // curl_setopt($ch, CURLOPT_HEADER, 1);
 
@@ -107,7 +107,7 @@ $zonetodis = (int)$curusr->cancel_update_team == 1 && (CrmUser::isTelepro($curre
 // 	'submitBtn' => ''
 // );
 // curl_setopt($ch, CURLOPT_POST, true);
-// curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($pst)); 
+// curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($pst));
 // $result = curl_exec($ch);
 
 //  if (curl_errno($ch)) {
@@ -147,7 +147,7 @@ $zonetodis = (int)$curusr->cancel_update_team == 1 && (CrmUser::isTelepro($curre
 					<!-- END Normal Form Title -->
 
 					<form onsubmit="return false;" class="form-bordered form-horizontal" method="post" action="crmajax.php" id="frminfousr">
-						<fieldset <?php echo $zonetodis ? 'disabled="disabled"' : ''; ?>>	
+						<fieldset <?php echo $zonetodis ? 'disabled="disabled"' : ''; ?>>
 							<!-- Normal Form Content -->
 							<div class="form-group">
 								<label for="id_statuscont" class="col-md-3 control-label">Statut <span class="text-danger">*</span></label>
@@ -333,7 +333,7 @@ $zonetodis = (int)$curusr->cancel_update_team == 1 && (CrmUser::isTelepro($curre
 									</div>
 								</div>
 							<?php } ?>
-							
+
 							<div class="form-group">
 								<label for="source" class="col-md-3 control-label">Source <span class="text-danger">*</span></label>
 								<div class="col-md-9">
@@ -390,7 +390,7 @@ $zonetodis = (int)$curusr->cancel_update_team == 1 && (CrmUser::isTelepro($curre
 								<button class="btn btn-sm btn-primary" type="submit" id="btupdateusr"><i class="fa fa-user"></i> Valider</button>
 								<button class="btn btn-sm btn-warning" type="reset"><i class="fa fa-repeat"></i> Annuler</button>
 							</div>
-						</fieldset>	
+						</fieldset>
 					</form>
 				</div>
 			</div>
@@ -405,7 +405,7 @@ $zonetodis = (int)$curusr->cancel_update_team == 1 && (CrmUser::isTelepro($curre
 						<li class=""><a href="#tabs-coment"><i class="fa fa-comment-o"></i> Commentaires <span class="badge" id="nbcomment"><?php echo $comments && $comments->num_rows > 0 ? $comments->num_rows : ''; ?></span></a></li>
 						<li class=""><a href="#tabs-local"><i class="fa fa-globe"></i> Localisation</a></li>
 						<li class=""><a href="#tabs-rdv"><i class="fa fa-calendar"></i> Rendez vous (pose)</a></li>
-						<?php if (!CrmUser::isTelepro($currentUser) && !CrmUser::isManager($currentUser)) { ?>							
+						<?php if (!CrmUser::isTelepro($currentUser) && !CrmUser::isManager($currentUser)) { ?>
 							<?php if ($rdvs && $rdvs->num_rows > 0) { ?>
 								<li class=""><a href="#tabs-sav"><i class="fa fa-life-saver"></i> Rendez vous (post visite)</a></li>
 							<?php }  ?>
@@ -418,7 +418,7 @@ $zonetodis = (int)$curusr->cancel_update_team == 1 && (CrmUser::isTelepro($curre
 					</ul>
 					<div class="tab-content">
 
-						<?php /*	
+						<?php /*
 						<div id="tabs-fin" class="tab-pane active">
 							<div class="block">
 								<div class="block-title">
@@ -569,7 +569,7 @@ $zonetodis = (int)$curusr->cancel_update_team == 1 && (CrmUser::isTelepro($curre
 															<label for="q_type_plancher" class="col-md-6 control-label">Type de plancher</label>
 															<div class="col-md-6">
 																<select id="q_type_plancher" name="q_type_plancher" class="form-control">
-																	<option value="">--</option>		
+																	<option value="">--</option>
 																	<option value="Dalle de beton" <?php echo $curusr->q_type_plancher == 'Dalle de beton' ? 'selected="selected"' : ''; ?>>Dalle de beton</option>
 																	<option value="En bois" <?php echo $curusr->q_type_plancher == 'En bois' ? 'selected="selected"' : ''; ?>>En bois</option>
 																</select>
@@ -581,7 +581,7 @@ $zonetodis = (int)$curusr->cancel_update_team == 1 && (CrmUser::isTelepro($curre
 															<label for="q_laine_plancher" class="col-md-6 control-label">Laine sur le plancher de vos combles</label>
 															<div class="col-md-6">
 																<select id="q_laine_plancher" name="q_laine_plancher" class="form-control">
-																	<option value="0">--</option>	
+																	<option value="0">--</option>
 																	<option value="2" <?php echo $curusr->q_laine_plancher == 1 ? 'selected="selected"' : ''; ?>>Oui</option>
 																	<option value="1" <?php echo $curusr->q_laine_plancher == 0 ? 'selected="selected"' : ''; ?>>Non</option>
 																</select>
@@ -797,7 +797,7 @@ $zonetodis = (int)$curusr->cancel_update_team == 1 && (CrmUser::isTelepro($curre
 													<div class="col-md-6">
 														<div class="form-group">
 															<label for="q_poser_poly_10cm" class="col-md-6 control-label">Poser un polystyrène de 10cm d’épaisseur</label>
-															<div class="col-md-6">															
+															<div class="col-md-6">
 																<select id="q_poser_poly_10cm" name="q_poser_poly_10cm" class="form-control">
 																	<option value="0">--</option>
 																	<option value="2" <?php echo $curusr->q_poser_poly_10cm == 1 ? 'selected="selected"' : ''; ?>>Ok</option>
@@ -935,8 +935,8 @@ $zonetodis = (int)$curusr->cancel_update_team == 1 && (CrmUser::isTelepro($curre
 											</div>
 										</div>
 									</form>
-								</div>	
-							<?php } ?>						
+								</div>
+							<?php } ?>
 						</div>
 
 						<div id="tabs-dir" class="tab-pane active">
@@ -1029,7 +1029,7 @@ $zonetodis = (int)$curusr->cancel_update_team == 1 && (CrmUser::isTelepro($curre
 													</tr>
 													<tr>
 														<td colspan="3">
-															<a href="#" class="btn btn-sm btn-success pull-left btviewimpot" <?php echo (!$prest || $prest->impot_html == '') && $curusr->q_impot_html == '' ? 'style="display:none;"' : ''; ?>>Voir la fiche fiscale des impots</a>															
+															<a href="#" class="btn btn-sm btn-success pull-left btviewimpot" <?php echo (!$prest || $prest->impot_html == '') && $curusr->q_impot_html == '' ? 'style="display:none;"' : ''; ?>>Voir la fiche fiscale des impots</a>
 															<button class="btn btn-sm btn-primary pull-right" type="button" id="btsyncfisc"><i class="fa fa-repeat"></i> Synchro fiscale</button>
 															<?php if ($isdoublonfiscal > 0) { ?>
 																<strong style="position:absolute;left:0;right:0;font-size:14px;" class="text-center text-danger"><i class="fa fa-warning"></i> Attention, ces numéros fiscaux sont déja rentrés dans une autre fiche - ID : <?php echo $isdoublonfiscal; ?></strong>
@@ -1069,11 +1069,11 @@ $zonetodis = (int)$curusr->cancel_update_team == 1 && (CrmUser::isTelepro($curre
 													<label class="control-label" for="nb_person">Nombre de personne <span class="text-danger">*</span></label>
 													<input type="text" placeholder="Nombre de personne du foyer ..." class="form-control" name="nb_person" id="nb_person" value="<?php echo $prest ? $prest->nb_person : $curusr->q_nb_person; ?>" required>
 												</div>
-											</div>	
+											</div>
 											<legend>
 												<i class="fa fa-users"></i>
 												Surface et matériaux
-											</legend>	
+											</legend>
 											<div class="form-group">
 												<div class="col-md-2">
 													<label class="control-label" for="101_m2">101 <span class="text-danger">*</span></label>
@@ -1156,7 +1156,7 @@ $zonetodis = (int)$curusr->cancel_update_team == 1 && (CrmUser::isTelepro($curre
 												<div class="col-md-2">
 												<label class="control-label" for="103_clous">Clous ?</label><br>
 													<label class="switch switch-primary"><input type="checkbox" name="103_clous" id="103_clous" <?php echo $prest && $prest->{'103_clous'} == '1' ? 'checked="true"' : ''; ?>><span></span></label>
-												</div>												
+												</div>
 											</div>
 										</fieldset>
 										<?php if (CrmUser::isAdmin($currentUser) || CrmUser::isConfirmateur($currentUser)) { ?>
@@ -1205,7 +1205,7 @@ $zonetodis = (int)$curusr->cancel_update_team == 1 && (CrmUser::isTelepro($curre
 															?>
 														</select>
 													</div>
-												</div>										
+												</div>
 											</fieldset>
 										<?php } ?>
 										<input type="hidden" name="action" id="action" value="update-dir" />
@@ -1219,7 +1219,7 @@ $zonetodis = (int)$curusr->cancel_update_team == 1 && (CrmUser::isTelepro($curre
 								</form>
 							</div>
 						</div>
-												
+
 						<div id="tabs-rdv" class="tab-pane">
 							<?php
 							$rdvs = RDV::getBy(array('r.id_contact' => $curusr->id_contact, 'type_rdv' => '0'));
@@ -1366,7 +1366,7 @@ $zonetodis = (int)$curusr->cancel_update_team == 1 && (CrmUser::isTelepro($curre
 															<td><a href="entrepot.php?id_entrepot=<?php echo $sav['id_entrepot']; ?>"><?php echo $sav['entrepot_name']; ?></a></td>
 															<td><?php echo (int)$sav['id_installator'] > 0 ? '<a href="installator.php?id_installator=' . $sav['id_installator'] . '">' . $sav['installator_name'] . '</a>' : 'NON RENSEIGNÉ'; ?></td>
 															<td><?php echo date('H:i', strtotime($sav['rdv_start'])) . ' - ' . date('H:i', strtotime($sav['rdv_end'])); ?></td>
-															<td><?php echo date('H:i', strtotime($sav['creneau_start'])) . ' - ' . date('H:i', strtotime($sav['creneau_end'])); ?></td>															
+															<td><?php echo date('H:i', strtotime($sav['creneau_start'])) . ' - ' . date('H:i', strtotime($sav['creneau_end'])); ?></td>
 															<td><?php echo (int)$rdv['status_rdv'] == 0 ? 'A confirmer' : ((int)$rdv['status_rdv'] == 1 ? 'OK Confirmé' : ((int)$rdv['status_rdv'] == 0 ? 'A Confirmer' : 'Validé')); ?></td>
 															<td><?php echo (int)$sav['sav_done'] == 0 ? 'A effectuer' : 'Effectué'; ?></td>
 															<td>
@@ -1385,7 +1385,7 @@ $zonetodis = (int)$curusr->cancel_update_team == 1 && (CrmUser::isTelepro($curre
 										</div>
 									</div>
 								<?php
-							} 
+							}
 							?>
 								<div class="block">
 									<div class="block-title">
@@ -1478,8 +1478,8 @@ $zonetodis = (int)$curusr->cancel_update_team == 1 && (CrmUser::isTelepro($curre
 									</div>
 								</div>
 							</div>
-						</div>						
-						
+						</div>
+
 						<?php if (!CrmUser::isTelepro($currentUser) && !CrmUser::isManager($currentUser)) { ?>
 							<div id="tabs-cadastre" class="tab-pane">
 								<div class="block">
@@ -1514,10 +1514,10 @@ $zonetodis = (int)$curusr->cancel_update_team == 1 && (CrmUser::isTelepro($curre
 														if (Tool::isImage($doc['name_doc'])) {
 															?>
 															<div class="col-sm-3 gallery-image">
-																<img src="<?php echo $template['url'] . '/uploads/' . $curusr->codekey . $curusr->id_contact . '/' . $doc['name_doc']; ?>" alt="image">
+																<img src="<?php echo $doc['name_doc']; ?>" alt="image">
 																<div class="gallery-image-options text-center">
 																	<div class="btn-group btn-group-sm">
-																		<a href="<?php echo $template['url'] . '/uploads/' . $curusr->codekey . $curusr->id_contact . '/' . $doc['name_doc']; ?>" class="gallery-link btn btn-sm btn-alt btn-default" title="Ajoutée <?php echo date('d/m/Y H:i', strtotime($doc['date_doc'])); ?>">Zoom</a>
+																		<a href="<?php echo $doc['name_doc']; ?>" class="gallery-link btn btn-sm btn-alt btn-default" title="Ajoutée <?php echo date('d/m/Y H:i', strtotime($doc['date_doc'])); ?>">Zoom</a>
 																		<a href="javascript:void(0)" class="btn btn-sm btn-alt btn-default deldoc" title="Supprimer" data-id="<?php echo $doc['id_doc']; ?>"><i class="fa fa-trash"></i></a>
 																	</div>
 																</div>
@@ -1526,10 +1526,10 @@ $zonetodis = (int)$curusr->cancel_update_team == 1 && (CrmUser::isTelepro($curre
 													} else {
 														?>
 															<div class="col-sm-3 gallery-image gallery-file">
-																<i class="hi hi-file"></i><br><?php echo $doc['name_doc']; ?>
+																<i class="hi hi-file"></i><br><?php echo filename($doc['name_doc']); ?>
 																<div class="gallery-image-options text-center">
 																	<div class="btn-group btn-group-sm">
-																		<a href="<?php echo $template['url'] . '/uploads/' . $curusr->codekey . $curusr->id_contact . '/' . $doc['name_doc']; ?>" class="btn btn-sm btn-alt btn-default" target="new" title="Ajoutée <?php echo date('d/m/Y H:i', strtotime($doc['date_doc'])); ?>">Voir</a>
+																		<a href="<?php echo $doc['name_doc']; ?>" class="btn btn-sm btn-alt btn-default" target="new" title="Ajoutée <?php echo date('d/m/Y H:i', strtotime($doc['date_doc'])); ?>">Voir</a>
 																		<a href="javascript:void(0)" class="btn btn-sm btn-alt btn-default deldoc" title="Supprimer" data-id="<?php echo $doc['id_doc']; ?>"><i class="fa fa-trash"></i></a>
 																	</div>
 																</div>
@@ -1721,7 +1721,7 @@ $zonetodis = (int)$curusr->cancel_update_team == 1 && (CrmUser::isTelepro($curre
 <!-- END Page Content -->
 
 
-<?php include 'inc/page_footer.php'; ?> 
+<?php include 'inc/page_footer.php'; ?>
 
 <!-- Remember to include excanvas for IE8 chart support -->
 <!--[if IE 8]><script src="js/helpers/excanvas.min.js"></script><![endif]-->
@@ -1731,7 +1731,7 @@ $zonetodis = (int)$curusr->cancel_update_team == 1 && (CrmUser::isTelepro($curre
 <!-- Load and execute javascript code used only in this page -->
 <script>
 	$(document).ready(function() {
-		
+
 
 		$('#frminfousr').submit(function() {
 			if (parseInt($('#id_statuscont').val()) == 0) {
@@ -1906,7 +1906,7 @@ $zonetodis = (int)$curusr->cancel_update_team == 1 && (CrmUser::isTelepro($curre
 				}
 			});
 			return false;
-		});		
+		});
 
 		$('#btaddrecall').click(function() {
 			$('#modal-recall').modal();
@@ -2096,7 +2096,7 @@ $zonetodis = (int)$curusr->cancel_update_team == 1 && (CrmUser::isTelepro($curre
 					});
 
 					$("#calrdv").fullCalendar('render');
-					$('#modal-rdv').modal();										
+					$('#modal-rdv').modal();
 				} else {
 					HoldOn.close();
 					$.bootstrapGrowl('<h4>Erreur!</h4> <p>' + resp.message + '</p>', {
@@ -2128,7 +2128,7 @@ $zonetodis = (int)$curusr->cancel_update_team == 1 && (CrmUser::isTelepro($curre
 			else {
 				$('#date_from_sav').data('datepicker').update(b.format('L'));
 				$('#btgetsav').click();
-			}		    
+			}
 		});
 
 		$('#modal-rdv').on('shown.bs.modal', function() {
@@ -2416,7 +2416,7 @@ $zonetodis = (int)$curusr->cancel_update_team == 1 && (CrmUser::isTelepro($curre
 
 
 
-		
+
 		//var options = {types: ['geocode']};
 		var inp = document.getElementById('adr1');
 		var autoComplete = new google.maps.places.Autocomplete(inp); //, options);
@@ -2506,8 +2506,8 @@ $zonetodis = (int)$curusr->cancel_update_team == 1 && (CrmUser::isTelepro($curre
 					},
 					title: 'Entrepot <?php echo $curusr->entrepot_name; ?>'
 				});
-				markerent.setMap(map);	
-				latlngbounds.extend(myLatlngent);			
+				markerent.setMap(map);
+				latlngbounds.extend(myLatlngent);
 			<?php } ?>
 
 			$("a[href='#tabs-local']").on('shown.bs.tab', function() {

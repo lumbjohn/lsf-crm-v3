@@ -45,7 +45,7 @@ $template = array(
 	'robots'            => 'noindex, nofollow',
 	'title'             => 'LSF Energie - CRM de Gestion',
 	'description'       => 'LSF Energie - CRM de Gestion',
-	'url'				=> 'https://lsf-iso.fr/crm',
+	'url'				=> getenv('APP_URL') ? getenv('APP_URL') : 'https://lsf-crm-v2.herokuapp.com',
 	// true                     enable page preloader
 	// false                    disable page preloader
 	'page_preloader'    => false,

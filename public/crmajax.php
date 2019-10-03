@@ -53,7 +53,7 @@ if (isset($_POST['action'])) {
 			$currentUser = unserialize($_SESSION['crm_user']);
 	}
 
-	$URL = 'https://lsf-iso.fr/crm/';
+	$URL = getenv('APP_URL') ?: 'https://lsf-crm-v2.herokuapp.com/';
 
 	switch ($action) {
 		case 'login':
@@ -979,7 +979,7 @@ if (isset($_POST['action'])) {
 			if (!checkFields($_POST, array('id_contact')))
 				errorJSON(array('message' => 'Informations incorrectes'));
 
-			$dirup = __DIR__ . '/uploads/';
+			$dirup = __DIR__ . '/storage/uploads/';
 			$dir = $dirup . $_POST['codekey'].$_POST['id_contact'];
 			if (!is_dir($dir)) {
 				mkdir($dir);
@@ -987,9 +987,9 @@ if (isset($_POST['action'])) {
 			}
 
 			if ($fl = Tool::uploadFile($dir . '/', $_FILES['file'])) {
-				$filename = $URL . 'uploads/' . $_POST['codekey'] . $_POST['id_contact'] . '/' . $fl;
-				if ($iddoc = Doc::create(array('id_contact' => (int)$_POST['id_contact'], 'date_doc' => date('Y-m-d H:i:s'), 'name_doc' => $fl))) {
-					CrmAction::create(array('id_crmuser' => $currentUser->id_crmuser, 'table_action' => 'Contacts', 'id_entity' => $_POST['id_contact'], 'type_action' => 'AJOUT DOCUMENT', 'date_action' => date('Y-m-d H:i:s'), 'details_action' => $fl));
+				$filename = $URL . '/storage/uploads/' . $_POST['codekey'] . $_POST['id_contact'] . '/' . $fl;
+				if ($iddoc = Doc::create(array('id_contact' => (int)$_POST['id_contact'], 'date_doc' => date('Y-m-d H:i:s'), 'name_doc' => $filename))) {
+					CrmAction::create(array('id_crmuser' => $currentUser->id_crmuser, 'table_action' => 'Contacts', 'id_entity' => $_POST['id_contact'], 'type_action' => 'AJOUT DOCUMENT', 'date_action' => date('Y-m-d H:i:s'), 'details_action' => $filename));
 					successJSON(array('filename' => $filename, 'fl' => $fl, 'id_doc' => $iddoc, 'isimage' => Tool::isImage($filename) ? '1' : '0'));
 				}
 			}

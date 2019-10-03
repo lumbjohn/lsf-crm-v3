@@ -1,4 +1,12 @@
 <?php
+
+require __DIR__ . '/../../vendor/autoload.php';
+$dotenv = Dotenv\Dotenv::create(__DIR__ . '/../..');
+try {
+    $dotenv->load();
+} catch (DotEnv\Exception\InvalidPathException $e) {}
+$dotenv->required(['APP_URL', 'DB_HOST', 'DB_USERNAME', 'DB_DATABASE'])->notEmpty();
+
 include 'isodb.php'; // data interface php file
 include 'ImageResize.php';
 //include __DIR__.'/../lib/isofuncs.php';
@@ -1598,7 +1606,7 @@ class IsoPDFBuilder
 {
 	public static function checkDir($rep)
 	{
-		$dirup = __DIR__ . '/../crm/uploads/';
+		$dirup = __DIR__ . '/../storage/uploads/';
 		$dir = $dirup.$rep;
 		if (!is_dir($dir)) {
 			mkdir($dir);
@@ -1614,7 +1622,7 @@ class IsoPDFBuilder
 		$htmldoc = '<style type="text/css" media="screen,print">
 						<!--
 						* {
-							font-family: latoregular;
+							font-family: Arial;
 						}
 						.latolight {font-family:latolight;}
 						-->
@@ -1624,12 +1632,12 @@ class IsoPDFBuilder
 
 					</page>';
 
-		require_once('lib/html2pdf/vendor/autoload.php');
+		// require_once('lib/html2pdf/vendor/autoload.php');
 		try
 		{
 			$html2pdf = new HTML2PDF('P','A4','fr');
 			$html2pdf->WriteHTML($htmldoc);
-			$html2pdf->addFont('latoregular', '', 'latoregular');
+			// $html2pdf->addFont('latoregular', '', 'latoregular');
 			$filename = $dir.'/'.$docname;
 			$html2pdf->Output($filename, 'F');
 			return $local ? $filename : 'uploads/'.$rep.'/'.$docname.'?time='.time();
@@ -1892,5 +1900,10 @@ class MailEngine
 
 }
 
+function filename ($url) {
+    // Extract filename from URL
+    $parts = explode('/', $url);
+    return end($parts);
+}
 
 ?>
