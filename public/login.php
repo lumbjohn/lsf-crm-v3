@@ -8,16 +8,16 @@
 
 <!-- Login Container -->
 <div id="login-container" class="animation-fadeIn">
-    <!-- Login Title -->	
+    <!-- Login Title -->
     <div class="login-title text-center">
         <h1><i class="gi gi-flash"></i> <strong>Secure connect</strong><br><small>Please <strong>Login</strong></small></h1>
     </div>
     <!-- END Login Title -->
 
     <!-- Login Block -->
-    <div class="block push-bit"> 
+    <div class="block push-bit">
         <!-- Login Form -->
-        <form action="crmajax.php" method="post" id="form-login" class="form-horizontal form-bordered form-control-borderless">
+        <form action="crmajaxlogin.php" method="post" id="form-login" class="form-horizontal form-bordered form-control-borderless">
 			<input type="hidden" name="action" id="action" value="login" />
             <div class="form-group">
                 <div class="col-xs-12">
@@ -63,7 +63,7 @@
 
 <!-- Load and execute javascript code used only in this page -->
 <script>
-    $(function(){ 
+    $(function(){
         $('#form-login').validate({
             errorClass: 'help-block animation-slideDown', // You can change the animation class for a different entrance animation - check animations page
             errorElement: 'div',
@@ -95,26 +95,26 @@
                     minlength: 'Your password must be at least 5 characters long'
                 }
             }
-        });  
-        
+        });
+
         $('#form-login').submit(function() {
             $('#btlogin').prop( "disabled", true );
             jQuery(this).ajaxSubmit({
                 dataType:'json',
-                success : function (resp) {	
+                success : function (resp) {
                     if (resp.code == 'SUCCESS') {
                         location.href = 'index.php';
                     }
                     else
                     if (resp.code == 'ERROR')
                         alert(resp.message);
-                    $('#btlogin').prop( "disabled", false);	
+                    $('#btlogin').prop( "disabled", false);
                 },
                 error : function() {
                     console.log('NO');
-                    $('#btlogin').prop( "disabled", false);	
+                    $('#btlogin').prop( "disabled", false);
                 }
-            }); 
+            });
             return false;
         });
 
