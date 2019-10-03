@@ -261,3 +261,10 @@ function _session($key = null, $default = null)
 
     return $_SESSION[$key] ?? $default;
 }
+
+function filename($url)
+{
+    // Extract filename from URL
+    $parts = explode('/', $url);
+    return end($parts);
+}

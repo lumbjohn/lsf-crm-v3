@@ -1,22 +1,17 @@
 <?php
 
-require __DIR__ . '/../../vendor/autoload.php';
-$dotenv = Dotenv\Dotenv::create(__DIR__ . '/../..');
-try {
-    $dotenv->load();
-} catch (DotEnv\Exception\InvalidPathException $e) {}
-$dotenv->required(['APP_URL', 'DB_HOST', 'DB_USERNAME', 'DB_DATABASE'])->notEmpty();
-
 ini_set('display_errors', 0);
 error_reporting(E_ALL);
 
-include 'isodb.php'; // data interface php file
-include 'ImageResize.php';
-//include __DIR__.'/../lib/isofuncs.php';
-
+require __DIR__ . '/../../vendor/autoload.php';
 require __DIR__ . '/../lib/vendor/autoload.php';
-use \Ovh\Api;
+require __DIR__ . '/../lib/google-api/vendor/autoload.php';
+require __DIR__.'/../lib/PHPMailer/PHPMailerAutoload.php';
+require __DIR__ . '/load_env.php';
+require __DIR__ . '/isodb.php';
+require __DIR__ . '/ImageResize.php';
 
+use \Ovh\Api;
 
 class Tool
 {
@@ -304,8 +299,6 @@ class Tool
 	}
 }
 
-
-
 class Search
 {
 	public static function get($txt, $currentUser)
@@ -483,7 +476,6 @@ class Contact
 	}
 }
 
-
 class Comment
 {
 	public static function findOne($conds)
@@ -588,7 +580,6 @@ class Entrepot
 	}
 }
 
-
 class Installator
 {
 	public static function findOne($conds)
@@ -629,7 +620,6 @@ class Installator
 		return DbQuery::delete('iso_installators', $conds);
 	}
 }
-
 
 class Planning
 {
@@ -1180,7 +1170,6 @@ class RDV
 
 }
 
-
 class Prestation
 {
 	public static function findOne($conds)
@@ -1227,7 +1216,6 @@ class Prestation
 
 }
 
-
 class Team
 {
 	public static function findOne($wh)
@@ -1253,8 +1241,6 @@ class Profil
 		return DbQuery::query('iso_profils', '*');
 	}
 }
-
-
 
 class CrmUser
 {
@@ -1313,7 +1299,6 @@ class CrmUser
 		return DbQuery::update('iso_crmusers', $flds, $wh);
 	}
 }
-
 
 class CrmUserTeam
 {
@@ -1532,7 +1517,6 @@ class Setting
 	}
 }
 
-
 class Template
 {
 	public static function displayListRDV($plans, $curusr, $sets)
@@ -1604,7 +1588,6 @@ class Template
 	}
 }
 
-
 class IsoPDFBuilder
 {
 	public static function checkDir($rep)
@@ -1653,11 +1636,6 @@ class IsoPDFBuilder
 	}
 }
 
-
-
-
-require __DIR__ . '/../lib/google-api/vendor/autoload.php';
-// USEFUL LINK - https://stackoverflow.com/questions/50656151/adding-an-event-to-google-calendar-using-php
 class GoogleAgenda
 {
 	private static function getClient()
@@ -1710,6 +1688,7 @@ class GoogleAgenda
 
 	public static function createEvent($calendarId, $idrdv, $summary, $description, $start, $end, $location)
 	{
+        // USEFUL LINK - https://stackoverflow.com/questions/50656151/adding-an-event-to-google-calendar-using-php
 		$client = GoogleAgenda::getClient();
 		$service = new Google_Service_Calendar($client);
 
@@ -1739,8 +1718,6 @@ class GoogleAgenda
 		return true;
 	}
 }
-
-
 
 class SMS
 {
@@ -1816,8 +1793,6 @@ class SMS
 	}
 }
 
-
-require __DIR__.'/../lib/PHPMailer/PHPMailerAutoload.php';
 class MailEngine
 {
 	private static function DefaultTemplate()
@@ -1902,11 +1877,3 @@ class MailEngine
 	}
 
 }
-
-function filename ($url) {
-    // Extract filename from URL
-    $parts = explode('/', $url);
-    return end($parts);
-}
-
-?>
