@@ -1,26 +1,27 @@
 <?php
 
-ini_set('display_errors', 0);
-error_reporting(E_ALL);
-
 include './inc/isobl.php';
 include './inc/functions.php';
 
-if (isset($_POST['action'])) {
+function handleAction()
+{
+    // check for specific action
+    if (!isset($_POST['action'])) {
+        die;
+    }
+
     $action = $_POST['action'];
 
-    // actions of connected user only
+    // check for connected user only
     if ($action !== 'login') {
         session_start();
         if (!isset($_SESSION['crmloggin'])) {
             echo '##';
             die;
         }
-
-        $currentUser = unserialize($_SESSION['crm_user'], ['allowed_classes' => true]);
     }
 
-    $URL = getenv('APP_URL') ?: 'https://lsf-crm-v2.herokuapp.com/';
+    $currentUser = unserialize($_SESSION['crm_user'], ['allowed_classes' => true]);
 
     switch ($action) {
         case 'login':
@@ -938,6 +939,8 @@ if (isset($_POST['action'])) {
                 errorJSON(array('message' => 'Informations incorrectes'));
             if (!checkFields($_POST, array('id_contact')))
                 errorJSON(array('message' => 'Informations incorrectes'));
+
+            $URL = getenv('APP_URL') ?: 'https://lsf-crm-v2.herokuapp.com/';
 
             $dirup = __DIR__ . '/storage/uploads/';
             $dir = $dirup . $_POST['codekey'] . $_POST['id_contact'];
@@ -2262,3 +2265,5 @@ if (isset($_POST['action'])) {
             break;
     }
 }
+
+handleAction();

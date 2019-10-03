@@ -7,6 +7,9 @@ try {
 } catch (DotEnv\Exception\InvalidPathException $e) {}
 $dotenv->required(['APP_URL', 'DB_HOST', 'DB_USERNAME', 'DB_DATABASE'])->notEmpty();
 
+ini_set('display_errors', 0);
+error_reporting(E_ALL);
+
 include 'isodb.php'; // data interface php file
 include 'ImageResize.php';
 //include __DIR__.'/../lib/isofuncs.php';
