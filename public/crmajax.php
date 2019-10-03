@@ -258,13 +258,14 @@ if (isset($_POST['action'])) {
     $action = $_POST['action'];
 
     //actions of connected user only
-    if ($action != 'login') {
+    if ($action !== 'login') {
         session_start();
         if (!isset($_SESSION['crmloggin'])) {
             echo '##';
             die;
-        } else
-            $currentUser = unserialize($_SESSION['crm_user']);
+        }
+
+        $currentUser = unserialize($_SESSION['crm_user'], ['allowed_classes' => true]);
     }
 
     $URL = getenv('APP_URL') ?: 'https://lsf-crm-v2.herokuapp.com/';
@@ -321,7 +322,6 @@ if (isset($_POST['action'])) {
             unset($crmuser->psw);
             successJSON(array('crmuser' => $crmuser));
             break;
-
 
         case 'update-crmuser':
             parse_str($_POST['data'], $crmuser);
@@ -414,7 +414,6 @@ if (isset($_POST['action'])) {
                 successJSON(array('OK' => 'OK'));
             }
             break;
-
 
         case 'update-contact':
             if (!checkFields($_POST, array('id_contact', 'first_name', 'last_name', 'tel1')))
@@ -750,7 +749,6 @@ if (isset($_POST['action'])) {
             }
             break;
 
-
         case 'update-quest':
             if (!checkFields($_POST, array('id_contact')))
                 errorJSON(array('message' => 'Informations incorrectes'));
@@ -964,7 +962,6 @@ if (isset($_POST['action'])) {
             successJSON(array('OK' => 'OK', 'log' => $logimport));
             break;
 
-
         case 'delete-contacts':
             if (!checkFields($_POST, array('rws')))
                 errorJSON(array('message' => 'Informations incorrectes'));
@@ -1007,8 +1004,7 @@ if (isset($_POST['action'])) {
             successJSON(array('OK' => 'OK'));
             break;
 
-
-        case 'changest-contacts';
+        case 'changest-contacts':
             if (!checkFields($_POST, array('rws', 'stcont', 'id_statuscont')))
                 errorJSON(array('message' => 'Informations incorrectes'));
 
@@ -1041,7 +1037,7 @@ if (isset($_POST['action'])) {
             successJSON(array('OK' => 'OK'));
             break;
 
-        case 'changestconf-contacts';
+        case 'changestconf-contacts':
             if (!checkFields($_POST, array('rws', 'stcontconf', 'id_statuscontconf')))
                 errorJSON(array('message' => 'Informations incorrectes'));
 
@@ -1455,7 +1451,6 @@ if (isset($_POST['action'])) {
 
             successJSON(array('id_prestation' => $idp, 'precainfo' => $preca, 'dorefresh' => $dorefresh ? '1' : '0'));
             break;
-
 
         case 'update-entrepot':
             if (!checkFields($_POST, array('id_entrepot', 'entrepot_name', 'adr1', 'post_code', 'city', 'tel1', 'email')))
@@ -1996,7 +1991,6 @@ if (isset($_POST['action'])) {
             successJSON(array('OK' => 'OK', 'rdvs' => $lst, 'ents' => $lste));
             break;
 
-
         case 'get-planning':
             if (!checkFields($_POST, array('start', 'end')))
                 errorJSON(array('message' => 'Informations incorrectes'));
@@ -2195,7 +2189,6 @@ if (isset($_POST['action'])) {
             $insts = Installator::findAvailable($start, $end, $entrepot->geolat, $entrepot->geolng, (int)$_POST['attach'] == 1, $entrepot->id_entrepot, $numplan);
             successJSON(array('insts' => ArrayLoader::loadAssoc($insts)));
             break;
-
 
         case 'attach-planning-installator':
             if (!checkFields($_POST, array('entplan', 'id_installator', 'date_start', 'date_end')))
@@ -2466,183 +2459,6 @@ if (isset($_POST['action'])) {
             successJSON(array('OK' => 'OK'));
             break;
 
-        case 'attach-planning-installator':
-            if (!checkFields($_POST, array('entplan', 'id_installator', 'date_start', 'date_end')))
-                errorJSON(array('message' => 'Informations incorrectes'));
-
-            $start = Tool::dmYtoYmd($_POST['date_start']);
-            $end = Tool::dmYtoYmd($_POST['date_end']);
-            $entplan = explode('_', $_POST['entplan']);
-            $ident = $entplan[0];
-            $numplan = $entplan[1];
-            $modeattach = (int)$_POST['attach'] == 1;
-
-            $inst = Installator::findOne(array('id_installator' => (int)$_POST['id_installator']));
-            if (!$inst)
-                errorJSON(array('message' => 'Installateur incorrecte'));
-            if (($inst->type_msg == 0 || $inst->type_msg == 2) && $inst->agenda_id == '')
-                errorJSON(array('message' => 'ID de l\'Agenda Google manquant'));
-            if (($inst->type_msg == 1 || $inst->type_msg == 2) && $inst->tel2 == '')
-                errorJSON(array('message' => 'Numéro de portable de l\'installateur manquant'));
-
-            $entrepot = Entrepot::findOne(array('id_entrepot' => (int)$ident));
-            if (!$entrepot)
-                errorJSON(array('message' => 'Entrepot incorrecte'));
-            if ($entrepot->email == '')
-                errorJSON(array('message' => 'Email de l\'entrepot non renseigné'));
-
-            $conds = "r.id_entrepot = " . (int)$ident . " AND r.num_planning = " . (int)$numplan . " AND r.id_installator = " . ($modeattach ? '0' : $inst->id_installator) . " AND date_rdv BETWEEN '" . $start . "' AND '" . $end . "'";
-            $rdvs = RDV::getBySimple($conds);
-            if (!$rdvs || $rdvs->num_rows == 0)
-                errorJSON(array('message' => 'Aucun rendez vous à ' . ($modeattach ? 'attribuer' : 'détacher') . ' sur cet entrepot et cette période'));
-
-
-            $nbmissm2 = 0;
-            foreach ($rdvs as $rdv)
-                if ((float)$rdv['101_m2'] == 0 && (float)$rdv['102_m2'] == 0 && (float)$rdv['103_m2'] == 0)
-                    $nbmissm2++;
-                else
-                    if ((float)$rdv['id_material_101'] == 0 && (float)$rdv['id_material_102'] == 0 && (float)$rdv['id_material_103'] == 0)
-                        $nbmissm2++;
-
-            if ($modeattach && $nbmissm2 > 0)
-                errorJSON(array('message' => 'Rattachement impossible ! Il existe ' . $nbmissm2 . ' rendez vous pour lesquels il manque le nombre de m2 et/ou le matériel utilisé !'));
-            else {
-                $totm2 = 0;
-                $nbm2 = 0;
-                $dtsave = 0;
-                $arrent = array();
-                $tps = array('101', '102', '103');
-                foreach ($rdvs as $rdv) {
-                    $infoinsm2 = '';
-                    if ($rdv['type_rdv'] == '0') {
-                        foreach ($tps as $tp) {
-                            if ((float)$rdv[$tp . '_m2'] > 0) {
-                                $mat = Setting::getMaterial(array('id_material' => $rdv['id_material_' . $tp]));
-                                $infoinsm2 .= $tp . ' - ' . (float)$rdv[$tp . '_m2'] . ' m² ' . ($mat ? '(' . $mat->name_material . ')' : '') . '<br>';
-                            }
-                        }
-                    }
-
-
-                    if ($modeattach) {
-                        $contact = Contact::findOne(array('c.id_contact' => $rdv['id_contact']));
-                        $fieldsquests = array(
-                            'q_type_habit' => 'Type habitation',
-                            'q_type_chauf' => 'Type de chauffage',
-                            'q_occupation' => 'Nature occupation',
-                            'q_plus2an' => 'Maison + de 2 ans',
-                            'q_taille_trappe_cm' => 'Taille de la trappe en cm',
-                            'q_plancher_sol' => 'Plancher au sol',
-                            'q_type_plancher' => 'Type de plancher',
-                            'q_laine_plancher' => 'Laine sur le plancher de vos combles',
-                            'q_type_laine' => 'Type de laine',
-                            'q_poutre_visible' => 'Si non les poutres sont-elles visibles',
-                            'q_comble_m2' => 'Comble en M2',
-                            'q_type_laine_amettre' => 'Type de laine à mettre',
-                            'q_pas_laine_plancher' => 'Si pas laine sur plancher',
-                            'q_cave_soussol' => 'Cave ou un sous sol ou un vide sanitaire ?',
-                            'q_acces_passage' => 'l\'acces ou passage est de',
-                            'q_exist_polystyrene_cave' => 'Y a t-il déjà du polystyrène ?',
-                            'q_tuyau_plafond_cave' => 'Tuyauterie au plafond de la cave',
-                            'q_espace_chauffe' => 'Espace chauffé ',
-                            'q_chaudiere' => 'Chaudiere',
-                            'q_mlineair_tuyau' => 'Nombre de m linéaire de tuyau ?',
-                            'q_voyez_plafond_parking' => 'Quand vous regardez votre plafond de parking vous voyez',
-                            'q_bois_apparente' => 'Bois apparente',
-                            'q_polystyrene_lineair' => 'Polystyrène linéaire',
-                            'q_epaisseur_polystyrene_plafond' => 'Polystyrène épaisseur',
-                            'q_espace_voute' => 'Espace vouté',
-                            'q_poser_poly_10cm' => 'Poser un polystyrène de 10cm d’épaisseur',
-                            'q_mur_mitoyen_encombre' => 'Mur mitoyen encombre',
-                            'q_si_mur_encombre' => 'Si mur encombre',
-                            'q_taille_mur_mitoyen_m2' => 'Taille du mur mitoyen en m2'
-                        );
-                        $fiedlsyesno = array(
-                            'q_plus2an', 'q_plancher_sol', 'q_laine_plancher', 'q_poutre_visible', 'q_cave_soussol', 'q_exist_polystyrene_cave', 'q_espace_chauffe', 'q_chaudiere', 'q_tuyau_plafond_cave',
-                            'q_bois_apparente', 'q_polystyrene_lineair', 'q_espace_voute', 'q_mur_mitoyen_encombre'
-                        );
-
-                        $adr = $rdv['adr1'] . ' ' . $rdv['post_code'] . ' ' . $rdv['city'];
-                        $infobase = 'Adresse : ' . $adr . '<br>'
-                            . 'Tél : ' . $rdv['tel1'] . '<br>'
-                            . 'Tél2 : ' . $rdv['tel2'] . '<br>'
-                            . 'Email : ' . $rdv['email'] . '<br>'
-                            . 'Code secret : ' . $rdv['code_dossier'] . '<br>'
-                            . 'Source : ' . $rdv['source'] . '<br>'
-                            . 'Infos fiscales : ' . $rdv['no_fiscal_1'] . ' / ' . $rdv['ref_avis_1'] . '<br><br>'
-                            . '<u>Métrages et produits :</u><br>' . $infoinsm2;
-
-                        $infobasesms = 'Adresse : ' . $adr . '<br>'
-                            . 'Tél : ' . $rdv['tel1'] . '<br>'
-                            . 'Tél2 : ' . $rdv['tel2'] . '<br>'
-                            . 'Email : ' . $rdv['email'] . '<br>'
-                            . 'Code secret : ' . $rdv['code_dossier'] . '<br>'
-                            . '<u>Métrages et produits :</u><br>' . $infoinsm2;
-
-                        $infoques = '<u>Infos questionnaire :</u><br><br>';
-
-                        foreach ($fieldsquests as $key => $val)
-                            if ($contact->{$key} != '' && $contact->{$key} != '--' && $contact->{$key} != '0')
-                                $infoques .= $val . ' : <b>' . (in_array($key, $fiedlsyesno) ? ($contact->{$key} == '1' ? 'Oui' : 'Non') : $contact->{$key}) . '</b><br>';
-
-                        $infocom = '<u>Commentaires :</u><br><br>' . $rdv['comment'];
-
-                        $infocli = $rdv['first_name'] . ' ' . $rdv['last_name'];
-                        $infosup = $infobase . '<br><br>' . $infoques . '<br><br>' . $infocom;
-                        $infosupsms = $infobasesms . '<br><br>' . $infoques . '<br><br>' . $infocom;
-
-                        try {
-                            $idev = 0;
-                            //Google Agenda new Event
-                            if (/*$rdv['type_rdv'] == '0' &&*/
-                            ($inst->type_msg == 0 || $inst->type_msg == 2)) {
-                                $idev = GoogleAgenda::createEvent($inst->agenda_id, $rdv['id_rdv'], $infocli, $infosup, strtotime($rdv['date_rdv'] . ' ' . $rdv['rdv_start']), strtotime($rdv['date_rdv'] . ' ' . $rdv['rdv_end']), $adr);
-                            }
-
-                            //Send SMS
-                            if (/*$rdv['type_rdv'] == '0' &&*/
-                            ($inst->type_msg == 1 || $inst->type_msg == 2)) {
-                                $specifsms = $inst->installator_name . '<br>'
-                                    . 'RDV AVEC ' . $infocli . '<br>'
-                                    . 'A' . date('d/m/Y H:i', strtotime($rdv['date_rdv'] . ' ' . $rdv['rdv_start']));
-
-                                $smsmsg = $specifsms . '<br>' . str_replace(array('<u>', '</u>', '<b>', '</b>'), '', $infosupsms);
-                                if (strlen($smsmsg) >= 600) {
-                                    $sms = SMS::SendMessage($specifsms . '<br>' . str_replace(array('<u>', '</u>', '<b>', '</b>'), '', $infobasesms), $inst->tel2);
-                                    $sms = SMS::SendMessage($infocli . '<br>' . str_replace(array('<u>', '</u>', '<b>', '</b>'), '', $infocom), $inst->tel2);
-                                } else
-                                    $sms = SMS::SendMessage($smsmsg, $inst->tel2);
-                            }
-
-                            RDV::update(array('status_rdv' => '2', 'id_installator' => $inst->id_installator, 'id_event' => $idev), array('id_rdv' => $rdv['id_rdv']));
-                            Prestation::update(array('id_installator' => $inst->id_installator), array('id_contact' => $rdv['id_contact']));
-                        } catch (Exception $e) {
-                            errorJSON(array('message' => 'Erreur au rattachement installateur : ' . $e->getMessage()));
-                        }
-                    } else {
-                        try {
-                            if (/*$rdv['type_rdv'] == '0' &&*/
-                            ($inst->type_msg == 0 || $inst->type_msg == 2))
-                                GoogleAgenda::deleteEvent($inst->agenda_id, $rdv['id_event']);
-
-                            RDV::update(array('status_rdv' => '0', 'id_installator' => '0', 'id_event' => ''), array('id_rdv' => $rdv['id_rdv']));
-                            Prestation::update(array('id_installator' => '0'), array('id_contact' => $rdv['id_contact']));
-                        } catch (Exception $e) {
-                            errorJSON(array('message' => 'Erreur au déttachement installateur : ' . $inst->agenda_id . ' ' . $rdv['id_event'] . ' ' . $e->getMessage()));
-                        }
-                    }
-                }
-
-
-                successJSON(array('OK' => 'OK'));
-            }
-
-            //GoogleAgenda::ListEvents($inst->agenda_id);
-
-            successJSON(array('resp' => $msgent, 'agenda_id' => $inst->agenda_id));
-            break;
-
         case 'get-direction':
             if (!checkFields($_POST, array('deplat', 'deplng', 'deslat', 'deslng', 'tm')))
                 errorJSON(array('message' => 'Informations incorrectes'));
@@ -2651,7 +2467,6 @@ if (isset($_POST['action'])) {
             $info = Tool::getCurl($url);
             successJSON(array('gmap' => $info));
             break;
-
 
         case 'get-map-rdvs':
             if (!checkFields($_POST, array('dt', 'id_entrepot')))
