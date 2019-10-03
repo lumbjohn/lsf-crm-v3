@@ -3,46 +3,46 @@
 include './inc/isobl.php';
 include './inc/functions.php';
 
-function handleAction()
+function handleAction($request_input)
 {
     // check for specific action
-    if (!isset($_POST['action'])) {
+    if (!isset($request_input['action'])) {
         die;
     }
 
-    $action = $_POST['action'];
+    $action = $request_input['action'];
 
     // check for connected user only
     if ($action !== 'login') {
         session_start();
-        if (!isset($_SESSION['crmloggin'])) {
+        if (!_session('crmloggin')) {
             echo '##';
             die;
         }
     }
 
-    $currentUser = unserialize($_SESSION['crm_user'], ['allowed_classes' => true]);
+    $currentUser = unserialize(_session('crm_user'), ['allowed_classes' => true]);
 
     switch ($action) {
         case 'login':
-            if (!checkFields($_POST, array('email', 'psw')))
+            if (!checkFields($request_input, array('email', 'psw')))
                 errorJSON(array('message' => 'Champs obligatoires manquants'));
 
-            $user = CrmUser::findOne(array('email' => $_POST['email']));
+            $user = CrmUser::findOne(array('email' => $request_input['email']));
             if (!$user) {
-                CrmAction::create(array('id_crmuser' => '0', 'table_action' => 'CRMUsers', 'id_entity' => '0', 'type_action' => 'LOGIN ECHEC EMAIL', 'date_action' => date('Y-m-d H:i:s'), 'details_action' => 'IP:' . Tool::getRealIpAddr() . ' - EMAIL:' . $_POST['email']));
+                CrmAction::create(array('id_crmuser' => '0', 'table_action' => 'CRMUsers', 'id_entity' => '0', 'type_action' => 'LOGIN ECHEC EMAIL', 'date_action' => date('Y-m-d H:i:s'), 'details_action' => 'IP:' . Tool::getRealIpAddr() . ' - EMAIL:' . $request_input['email']));
                 errorJSON(array('message' => 'Utilisateur non enregistré'));
             }
 
-            if ($user->psw == md5($_POST['psw'])) {
+            if ($user->psw == md5($request_input['psw'])) {
                 session_start();
-                $_SESSION['crmloggin'] = true;
-                $_SESSION['crm_user'] = serialize($user);
+                _session(['crmloggin' => true]);
+                _session(['crm_user' => serialize($user)]);
                 CrmUser::update(array('date_last_login' => date('Y-m-d H:i:s'), 'ip_login' => Tool::getRealIpAddr()), array('id_crmuser' => $user->id_crmuser));
                 CrmAction::create(array('id_crmuser' => $user->id_crmuser, 'table_action' => 'CRMUsers', 'id_entity' => $user->id_crmuser, 'type_action' => 'LOGIN', 'date_action' => date('Y-m-d H:i:s')));
                 successJSON(array('OK' => 'OK'));
             } else {
-                CrmAction::create(array('id_crmuser' => '0', 'table_action' => 'CRMUsers', 'id_entity' => '0', 'type_action' => 'LOGIN ECHEC', 'date_action' => date('Y-m-d H:i:s'), 'details_action' => 'IP:' . Tool::getRealIpAddr() . ' - EMAIL:' . $_POST['email']));
+                CrmAction::create(array('id_crmuser' => '0', 'table_action' => 'CRMUsers', 'id_entity' => '0', 'type_action' => 'LOGIN ECHEC', 'date_action' => date('Y-m-d H:i:s'), 'details_action' => 'IP:' . Tool::getRealIpAddr() . ' - EMAIL:' . $request_input['email']));
                 errorJSON(array('message' => 'Informations incorrectes'));
             }
 
@@ -50,22 +50,22 @@ function handleAction()
             break;
 
         case 'global-search':
-            if (!checkFields($_POST, array('txt')))
+            if (!checkFields($request_input, array('txt')))
                 errorJSON(array('message' => 'Champs obligatoires manquants'));
 
-            $datas = Search::get($_POST['txt'], $currentUser);
+            $datas = Search::get($request_input['txt'], $currentUser);
             CrmAction::create(array('id_crmuser' => $currentUser->id_crmuser, 'table_action' => 'Search', 'id_entity' => '0', 'type_action' => 'RECHERCHE', 'date_action' => date('Y-m-d H:i:s')));
             successJSON(array('datas' => ArrayLoader::loadAssoc($datas)));
             break;
 
         case 'get-crmuser':
-            if (!CrmUser::isAdmin($currentUser) && $currentUser->id_crmuser != $_POST['idcrmuser'])
+            if (!CrmUser::isAdmin($currentUser) && $currentUser->id_crmuser != $request_input['idcrmuser'])
                 errorJSON(array('message' => 'Droits insuffisants'));
 
-            if (!checkFields($_POST, array('idcrmuser')))
+            if (!checkFields($request_input, array('idcrmuser')))
                 errorJSON(array('message' => 'Informations incorrectes'));
 
-            $crmuser = CrmUser::findOne(array('id_crmuser' => $_POST['idcrmuser']));
+            $crmuser = CrmUser::findOne(array('id_crmuser' => $request_input['idcrmuser']));
             if (!$crmuser)
                 errorJSON(array('message' => 'Utilisateur inconnu'));
 
@@ -77,7 +77,7 @@ function handleAction()
             break;
 
         case 'update-crmuser':
-            parse_str($_POST['data'], $crmuser);
+            parse_str($request_input['data'], $crmuser);
 
             if (!CrmUser::isAdmin($currentUser) && $currentUser->id_crmuser != $crmuser['id_crmuser'])
                 errorJSON(array('message' => 'Droits insuffisants'));
@@ -106,8 +106,8 @@ function handleAction()
                 if (CrmUser::isAdmin($currentUser)) {
                     $arr['id_profil'] = (int)$crmuser['id_profil'] > 0 ? $crmuser['id_profil'] : '2';
                     $arr['id_team'] = (int)$crmuser['id_profil'] > 1 ? $crmuser['id_team'] : '0';
-                    $arr['depts'] = (int)$crmuser['id_profil'] == 4 && isset($_POST['depts']) ? $_POST['depts'] : '';
-                    $arr['teams'] = (int)$crmuser['id_profil'] == 3 && isset($_POST['teams']) ? $_POST['teams'] : '';
+                    $arr['depts'] = (int)$crmuser['id_profil'] == 4 && isset($request_input['depts']) ? $request_input['depts'] : '';
+                    $arr['teams'] = (int)$crmuser['id_profil'] == 3 && isset($request_input['teams']) ? $request_input['teams'] : '';
                 }
 
                 if (!empty($crmuser['psw']))
@@ -138,8 +138,8 @@ function handleAction()
                     'psw' => md5($crmuser['psw'])
                 );
                 if (CrmUser::isAdmin($currentUser)) {
-                    $arr['depts'] = $idprofil == 4 && isset($_POST['depts']) ? $_POST['depts'] : '';
-                    $arr['teams'] = $idprofil == 3 && isset($_POST['teams']) ? $_POST['teams'] : '';
+                    $arr['depts'] = $idprofil == 4 && isset($request_input['depts']) ? $request_input['depts'] : '';
+                    $arr['teams'] = $idprofil == 3 && isset($request_input['teams']) ? $request_input['teams'] : '';
                 }
 
 
@@ -155,116 +155,116 @@ function handleAction()
             if ($currentUser->id_profil != 1)
                 errorJSON(array('message' => 'Droits insuffisants'));
 
-            if (!checkFields($_POST, array('idcrmuser')))
+            if (!checkFields($request_input, array('idcrmuser')))
                 errorJSON(array('message' => 'Informations incorrectes'));
 
-            $exct = Contact::findOne(array('id_crmuser' => $_POST['idcrmuser']));
+            $exct = Contact::findOne(array('id_crmuser' => $request_input['idcrmuser']));
             if ($exct)
                 errorJSON(array('message' => 'Suppression impossible ! Il reste des clients / prospects rattachés'));
 
-            if (CrmUser::delete(array('id_crmuser' => $_POST['idcrmuser']))) {
-                CrmAction::create(array('id_crmuser' => $currentUser->id_crmuser, 'table_action' => 'CrmUsers', 'id_entity' => $_POST['idcrmuser'], 'type_action' => 'SUPPRESSION', 'date_action' => date('Y-m-d H:i:s')));
+            if (CrmUser::delete(array('id_crmuser' => $request_input['idcrmuser']))) {
+                CrmAction::create(array('id_crmuser' => $currentUser->id_crmuser, 'table_action' => 'CrmUsers', 'id_entity' => $request_input['idcrmuser'], 'type_action' => 'SUPPRESSION', 'date_action' => date('Y-m-d H:i:s')));
                 successJSON(array('OK' => 'OK'));
             }
             break;
 
         case 'update-contact':
-            if (!checkFields($_POST, array('id_contact', 'first_name', 'last_name', 'tel1')))
+            if (!checkFields($request_input, array('id_contact', 'first_name', 'last_name', 'tel1')))
                 errorJSON(array('message' => 'Informations incorrectes'));
 
-            if (!checkFields($_POST, array('id_statuscont')))
+            if (!checkFields($request_input, array('id_statuscont')))
                 errorJSON(array('message' => 'Statut manquant'));
 
-            $numtel = preg_replace('/\D/', '', $_POST['tel1']);
+            $numtel = preg_replace('/\D/', '', $request_input['tel1']);
             if (strlen($numtel) != 10)
                 errorJSON(array('message' => 'Numéro de telephone invalide. Veuillez saisir le numéro au format 0612345678'));
 
             /*$sets = (object)Setting::getGlobalSettings();
-            if ((int)$_POST['id_statuscont'] != $sets->STATUS_NO_CTR_ADR)
-                if (!checkFields($_POST, array('adr1', 'post_code', 'city')))
+            if ((int)$request_input['id_statuscont'] != $sets->STATUS_NO_CTR_ADR)
+                if (!checkFields($request_input, array('adr1', 'post_code', 'city')))
                     errorJSON(array('message' => 'Informations d\'adresse manquantes'));*/
 
-            if ((int)$_POST['id_contact'] > 0) {
+            if ((int)$request_input['id_contact'] > 0) {
                 //update mode
 
-                $usr = Contact::findOne(array('c.id_contact' => $_POST['id_contact']));
+                $usr = Contact::findOne(array('c.id_contact' => $request_input['id_contact']));
                 if (!$usr)
                     errorJSON(array('message' => 'Client / Prospect inexistant'));
 
                 if ($currentUser->id_profil == 2 && $usr->id_crmuser != $currentUser->id_crmuser)
                     errorJSON(array('message' => 'Droits insuffisants'));
 
-                $geolat = (float)$_POST['geolat'];
-                $geolng = (float)$_POST['geolng'];
+                $geolat = (float)$request_input['geolat'];
+                $geolng = (float)$request_input['geolng'];
 
                 if ($geolat == 0 && $geolng == 0)
-                    Tool::getLatLngFromAddress(trim($_POST['adr1'] . ',' . $_POST['post_code'] . ',' . $_POST['city']), $geolat, $geolng);
+                    Tool::getLatLngFromAddress(trim($request_input['adr1'] . ',' . $request_input['post_code'] . ',' . $request_input['city']), $geolat, $geolng);
 
                 $arr = array(
-                    'first_name' => $_POST['first_name'],
-                    'last_name' => $_POST['last_name'],
-                    'raison_sociale' => $_POST['raison_sociale'],
-                    'adr1' => $_POST['adr1'],
-                    'adr2' => $_POST['adr2'],
-                    'post_code' => $_POST['post_code'],
-                    'city' => $_POST['city'],
+                    'first_name' => $request_input['first_name'],
+                    'last_name' => $request_input['last_name'],
+                    'raison_sociale' => $request_input['raison_sociale'],
+                    'adr1' => $request_input['adr1'],
+                    'adr2' => $request_input['adr2'],
+                    'post_code' => $request_input['post_code'],
+                    'city' => $request_input['city'],
                     'country' => 'FRANCE',
-                    'tel1' => $_POST['tel1'],
-                    'tel2' => $_POST['tel2'],
-                    'email' => $_POST['email'],
-                    'id_statuscont' => (int)$_POST['id_statuscont'],
-                    'id_statuscontconf' => (int)$_POST['id_statuscontconf'],
-                    'code_dossier' => $_POST['code_dossier'],
-                    'num_lot' => isset($_POST['num_lot']) ? $_POST['num_lot'] : '',
-                    'source' => $_POST['source'],
-                    'campain' => $_POST['campain'],
-                    'id_contact_parrain' => (int)$_POST['id_contact_parrain'],
+                    'tel1' => $request_input['tel1'],
+                    'tel2' => $request_input['tel2'],
+                    'email' => $request_input['email'],
+                    'id_statuscont' => (int)$request_input['id_statuscont'],
+                    'id_statuscontconf' => (int)$request_input['id_statuscontconf'],
+                    'code_dossier' => $request_input['code_dossier'],
+                    'num_lot' => isset($request_input['num_lot']) ? $request_input['num_lot'] : '',
+                    'source' => $request_input['source'],
+                    'campain' => $request_input['campain'],
+                    'id_contact_parrain' => (int)$request_input['id_contact_parrain'],
                     'geolat' => $geolat,
                     'geolng' => $geolng,
                     'date_update' => date('Y-m-d H:i:s')
                 );
-                if ($_POST['post_code'] != '')
-                    $arr['dept'] = substr($_POST['post_code'], 0, 2);
+                if ($request_input['post_code'] != '')
+                    $arr['dept'] = substr($request_input['post_code'], 0, 2);
 
-                if (isset($_POST['date_rdv_pros']) && $_POST['date_rdv_pros'] != '')
-                    $arr['date_rdv_pros'] = Tool::dmYtoYmd($_POST['date_rdv_pros']);
-                if (isset($_POST['heure_rdv_pros']))
-                    $arr['heure_rdv_pros'] = $_POST['heure_rdv_pros'] . ':00';
-                if (isset($_POST['creneau_start']))
-                    $arr['creneau_start'] = date('H:i:s', strtotime('+' . (int)$_POST['creneau_start'] . ' hour', strtotime(Tool::dmYtoYmd($_POST['date_rdv_pros']))));
-                if (isset($_POST['creneau_end']))
-                    $arr['creneau_end'] = date('H:i:s', strtotime('+' . (int)$_POST['creneau_end'] . ' hour', strtotime(Tool::dmYtoYmd($_POST['date_rdv_pros']))));
+                if (isset($request_input['date_rdv_pros']) && $request_input['date_rdv_pros'] != '')
+                    $arr['date_rdv_pros'] = Tool::dmYtoYmd($request_input['date_rdv_pros']);
+                if (isset($request_input['heure_rdv_pros']))
+                    $arr['heure_rdv_pros'] = $request_input['heure_rdv_pros'] . ':00';
+                if (isset($request_input['creneau_start']))
+                    $arr['creneau_start'] = date('H:i:s', strtotime('+' . (int)$request_input['creneau_start'] . ' hour', strtotime(Tool::dmYtoYmd($request_input['date_rdv_pros']))));
+                if (isset($request_input['creneau_end']))
+                    $arr['creneau_end'] = date('H:i:s', strtotime('+' . (int)$request_input['creneau_end'] . ' hour', strtotime(Tool::dmYtoYmd($request_input['date_rdv_pros']))));
 
 
                 if ($st = Setting::getStatusConf(array('id_statuscontconf' => $arr['id_statuscontconf'])))
                     if ($st->rdv_need_exists == 1) {
-                        $exrdv = RDV::findOne(array('id_contact' => (int)$_POST['id_contact']));
+                        $exrdv = RDV::findOne(array('id_contact' => (int)$request_input['id_contact']));
                         if (!$exrdv)
                             errorJSON(array('message' => 'Un RDV doit exister pour pouvoir utiliser ce statut'));
                     }
 
 
-                if (!CrmUser::isTelepro($currentUser) && !CrmUser::isConfirmateur($currentUser) && (int)$_POST['id_crmuser'] > 0)
-                    $arr['id_crmuser'] = (int)$_POST['id_crmuser'];
-                if (!CrmUser::isTelepro($currentUser) && isset($_POST['id_crmuser_conf']) && (int)$_POST['id_crmuser_conf'] > 0)
-                    $arr['id_crmuser_conf'] = (int)$_POST['id_crmuser_conf'];
+                if (!CrmUser::isTelepro($currentUser) && !CrmUser::isConfirmateur($currentUser) && (int)$request_input['id_crmuser'] > 0)
+                    $arr['id_crmuser'] = (int)$request_input['id_crmuser'];
+                if (!CrmUser::isTelepro($currentUser) && isset($request_input['id_crmuser_conf']) && (int)$request_input['id_crmuser_conf'] > 0)
+                    $arr['id_crmuser_conf'] = (int)$request_input['id_crmuser_conf'];
 
 
                 if (!CrmUser::isTelepro($currentUser)) {
-                    if (isset($_POST['date_install']) && $_POST['date_install'] != '')
-                        $arr['date_install'] = Tool::dmYtoYmd($_POST['date_install']);
-                    if (isset($_POST['date_valid']) && $_POST['date_valid'] != '')
-                        $arr['date_valid'] = Tool::dmYtoYmd($_POST['date_valid']);
+                    if (isset($request_input['date_install']) && $request_input['date_install'] != '')
+                        $arr['date_install'] = Tool::dmYtoYmd($request_input['date_install']);
+                    if (isset($request_input['date_valid']) && $request_input['date_valid'] != '')
+                        $arr['date_valid'] = Tool::dmYtoYmd($request_input['date_valid']);
                 }
 
                 // if (CrmUser::isAdmin($currentUser))
-                // 	$arr['id_parrain'] = $_POST['id_parrain'];
+                // 	$arr['id_parrain'] = $request_input['id_parrain'];
                 /*
-                if (strtotime($usr->date_valid) == 0 && ((int)$_POST['id_statuscont'] == 4 || (int)$_POST['id_statuscont'] == 13))
+                if (strtotime($usr->date_valid) == 0 && ((int)$request_input['id_statuscont'] == 4 || (int)$request_input['id_statuscont'] == 13))
                     $arr['date_valid'] = date('Y-m-d H:i:s');
                 else
-                if (strtotime($usr->date_install) == 0 && (int)$_POST['id_statuscont'] == 10) { //Installe
-                    $rdv = RDV::findOne(array('id_contact' => $_POST['id_contact']));
+                if (strtotime($usr->date_install) == 0 && (int)$request_input['id_statuscont'] == 10) { //Installe
+                    $rdv = RDV::findOne(array('id_contact' => $request_input['id_contact']));
                     if ($rdv)
                         $arr['date_install'] = $rdv->date_rdv;
                 }
@@ -304,20 +304,20 @@ function handleAction()
                 }
 
 
-                foreach ($_POST as $k => $v) {
+                foreach ($request_input as $k => $v) {
                     if (strpos($k, 'q_') !== false)
                         $arr[$k] = $v;
                 }
 
-                if (Contact::update($arr, array('id_contact' => (int)$_POST['id_contact']))) {
+                if (Contact::update($arr, array('id_contact' => (int)$request_input['id_contact']))) {
 
                     $arrupdrdv = array();
-                    if (isset($_POST['creneau_start']))
-                        $arrupdrdv['creneau_start'] = date('H:i', strtotime('+' . (int)$_POST['creneau_start'] . ' hour', strtotime(Tool::dmYtoYmd($_POST['date_rdv_pros']))));
-                    if (isset($_POST['creneau_end']))
-                        $arrupdrdv['creneau_end'] = date('H:i', strtotime('+' . (int)$_POST['creneau_end'] . ' hour', strtotime(Tool::dmYtoYmd($_POST['date_rdv_pros']))));
+                    if (isset($request_input['creneau_start']))
+                        $arrupdrdv['creneau_start'] = date('H:i', strtotime('+' . (int)$request_input['creneau_start'] . ' hour', strtotime(Tool::dmYtoYmd($request_input['date_rdv_pros']))));
+                    if (isset($request_input['creneau_end']))
+                        $arrupdrdv['creneau_end'] = date('H:i', strtotime('+' . (int)$request_input['creneau_end'] . ' hour', strtotime(Tool::dmYtoYmd($request_input['date_rdv_pros']))));
                     if (count($arrupdrdv) > 0)
-                        RDV::update($arrupdrdv, array('id_contact' => (int)$_POST['id_contact']));
+                        RDV::update($arrupdrdv, array('id_contact' => (int)$request_input['id_contact']));
 
                     $curidstatus = $arr['id_statuscont'];
                     $curidstatusconf = $arr['id_statuscontconf'];
@@ -331,16 +331,16 @@ function handleAction()
 
                         //Delete rdv for specific status conf
                         if ((int)$st->cancel_rdv == 1) {
-                            if (RDV::findOne(array('r.id_contact' => (int)$_POST['id_contact']))) {
-                                RDV::delete(array('id_contact' => (int)$_POST['id_contact']));
-                                CrmAction::create(array('id_crmuser' => $currentUser->id_crmuser, 'table_action' => 'Contacts', 'id_entity' => $_POST['id_contact'], 'type_action' => 'SUPPRESSION DU RDV SUITE AU CHANGEMENT DE STATUT', 'date_action' => date('Y-m-d H:i:s'), 'details_action' => 'Statut : ' . $st->name_statuscontconf));
+                            if (RDV::findOne(array('r.id_contact' => (int)$request_input['id_contact']))) {
+                                RDV::delete(array('id_contact' => (int)$request_input['id_contact']));
+                                CrmAction::create(array('id_crmuser' => $currentUser->id_crmuser, 'table_action' => 'Contacts', 'id_entity' => $request_input['id_contact'], 'type_action' => 'SUPPRESSION DU RDV SUITE AU CHANGEMENT DE STATUT', 'date_action' => date('Y-m-d H:i:s'), 'details_action' => 'Statut : ' . $st->name_statuscontconf));
                             }
                         }
 
                         //if not new - update status to the "force confirm" one
                         if (strpos(strtolower($st->name_statuscontconf), 'nouveau') === false) {
                             if ($st = Setting::getStatus(array('force_confirm' => '1'))) {
-                                Contact::update(array('id_statuscont' => $st->id_statuscont), array('id_contact' => (int)$_POST['id_contact']));
+                                Contact::update(array('id_statuscont' => $st->id_statuscont), array('id_contact' => (int)$request_input['id_contact']));
                                 $arr['id_statuscont'] = $st->name_statuscont;
                                 $curidstatus = $st->id_statuscont;
                             }
@@ -348,7 +348,7 @@ function handleAction()
                     }
 
                     //general update log
-                    CrmAction::create(array('id_crmuser' => $currentUser->id_crmuser, 'table_action' => 'Contacts', 'id_entity' => $_POST['id_contact'], 'type_action' => 'MODIFICATION', 'date_action' => date('Y-m-d H:i:s'), 'details_action' => Tool::arrayToStr($arr)));
+                    CrmAction::create(array('id_crmuser' => $currentUser->id_crmuser, 'table_action' => 'Contacts', 'id_entity' => $request_input['id_contact'], 'type_action' => 'MODIFICATION', 'date_action' => date('Y-m-d H:i:s'), 'details_action' => Tool::arrayToStr($arr)));
 
                     $audit = '';
 
@@ -358,7 +358,7 @@ function handleAction()
                         if ($st = Setting::getStatus(array('id_statuscont' => $usr->id_statuscont)))
                             $str .= $st->name_statuscont;
                         $str .= '<br>Nouveau statut : ' . $arr['id_statuscont'];
-                        CrmAction::create(array('id_crmuser' => $currentUser->id_crmuser, 'table_action' => 'Contacts', 'id_entity' => $_POST['id_contact'], 'type_action' => 'CHANGEMENT STATUT', 'date_action' => date('Y-m-d H:i:s'), 'details_action' => $str));
+                        CrmAction::create(array('id_crmuser' => $currentUser->id_crmuser, 'table_action' => 'Contacts', 'id_entity' => $request_input['id_contact'], 'type_action' => 'CHANGEMENT STATUT', 'date_action' => date('Y-m-d H:i:s'), 'details_action' => $str));
                         $audit .= 'Champ : <b>Statut Télépro</b> | Ancien : <b>' . $st->name_statuscont . '</b> | Nouveau : <b>' . $arr['id_statuscont'] . '</b><br>';
                     }
 
@@ -368,7 +368,7 @@ function handleAction()
                         if ($st = Setting::getStatusConf(array('id_statuscontconf' => $usr->id_statuscontconf)))
                             $str .= $st->name_statuscontconf;
                         $str .= '<br>Nouveau statut : ' . $arr['id_statuscontconf'];
-                        CrmAction::create(array('id_crmuser' => $currentUser->id_crmuser, 'table_action' => 'Contacts', 'id_entity' => $_POST['id_contact'], 'type_action' => 'CHANGEMENT STATUT CONFIRMATEUR', 'date_action' => date('Y-m-d H:i:s'), 'details_action' => $str));
+                        CrmAction::create(array('id_crmuser' => $currentUser->id_crmuser, 'table_action' => 'Contacts', 'id_entity' => $request_input['id_contact'], 'type_action' => 'CHANGEMENT STATUT CONFIRMATEUR', 'date_action' => date('Y-m-d H:i:s'), 'details_action' => $str));
                         $audit .= 'Champ : <b>Statut Confirmateur</b> | Ancien : <b>' . $st->name_statuscontconf . '</b> | Nouveau : <b>' . $arr['id_statuscontconf'] . '</b><br>';
                     }
 
@@ -383,7 +383,7 @@ function handleAction()
                     if ($audit != '')
                         Contact::addAudit(array(
                             'id_crmuser' => $currentUser->id_crmuser,
-                            'id_contact' => $_POST['id_contact'],
+                            'id_contact' => $request_input['id_contact'],
                             'date_update' => date('Y-m-d H:i:s'),
                             'details' => $audit
                         ));
@@ -393,50 +393,50 @@ function handleAction()
             } else {
                 //creation mode
                 $arr = array(
-                    'first_name' => $_POST['first_name'],
-                    'last_name' => $_POST['last_name'],
-                    'raison_sociale' => $_POST['raison_sociale'],
-                    'adr1' => $_POST['adr1'],
-                    'adr2' => $_POST['adr2'],
-                    'post_code' => $_POST['post_code'],
-                    'city' => $_POST['city'],
+                    'first_name' => $request_input['first_name'],
+                    'last_name' => $request_input['last_name'],
+                    'raison_sociale' => $request_input['raison_sociale'],
+                    'adr1' => $request_input['adr1'],
+                    'adr2' => $request_input['adr2'],
+                    'post_code' => $request_input['post_code'],
+                    'city' => $request_input['city'],
                     'country' => 'FRANCE',
-                    'tel1' => $_POST['tel1'],
-                    'tel2' => $_POST['tel2'],
-                    'email' => $_POST['email'],
-                    'id_statuscont' => (int)$_POST['id_statuscont'],
-                    'id_statuscontconf' => (int)$_POST['id_statuscontconf'],
-                    'code_dossier' => $_POST['code_dossier'],
-                    'num_lot' => $_POST['num_lot'],
-                    'source' => $_POST['source'],
-                    'campain' => $_POST['campain'],
-                    'id_contact_parrain' => (int)$_POST['id_contact_parrain'],
-                    'geolat' => (float)$_POST['geolat'],
-                    'geolng' => (float)$_POST['geolng'],
+                    'tel1' => $request_input['tel1'],
+                    'tel2' => $request_input['tel2'],
+                    'email' => $request_input['email'],
+                    'id_statuscont' => (int)$request_input['id_statuscont'],
+                    'id_statuscontconf' => (int)$request_input['id_statuscontconf'],
+                    'code_dossier' => $request_input['code_dossier'],
+                    'num_lot' => $request_input['num_lot'],
+                    'source' => $request_input['source'],
+                    'campain' => $request_input['campain'],
+                    'id_contact_parrain' => (int)$request_input['id_contact_parrain'],
+                    'geolat' => (float)$request_input['geolat'],
+                    'geolng' => (float)$request_input['geolng'],
                     'codekey' => substr(str_shuffle("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"), 0, 8),
                     'date_create' => date('Y-m-d H:i:s')
                 );
 
-                if ($_POST['post_code'] != '')
-                    $arr['dept'] = substr($_POST['post_code'], 0, 2);
+                if ($request_input['post_code'] != '')
+                    $arr['dept'] = substr($request_input['post_code'], 0, 2);
 
                 if ($st = Setting::getStatusConf(array('id_statuscontconf' => $arr['id_statuscontconf'])))
                     if ($st->rdv_need_exists == 1)
                         errorJSON(array('message' => 'Un RDV doit exister pour pouvoir utiliser ce statut'));
 
 
-                if (isset($_POST['date_rdv_pros']) && $_POST['date_rdv_pros'] != '')
-                    $arr['date_rdv_pros'] = Tool::dmYtoYmd($_POST['date_rdv_pros']);
-                if (isset($_POST['heure_rdv_pros']))
-                    $arr['heure_rdv_pros'] = $_POST['heure_rdv_pros'];
+                if (isset($request_input['date_rdv_pros']) && $request_input['date_rdv_pros'] != '')
+                    $arr['date_rdv_pros'] = Tool::dmYtoYmd($request_input['date_rdv_pros']);
+                if (isset($request_input['heure_rdv_pros']))
+                    $arr['heure_rdv_pros'] = $request_input['heure_rdv_pros'];
 
                 if (CrmUser::isTelepro($currentUser) || CrmUser::isConfirmateur($currentUser) || CrmUser::isManager($currentUser)) {
                     $arr['id_crmuser'] = $currentUser->id_crmuser;
                     if (CrmUser::isConfirmateur($currentUser))
                         $arr['id_crmuser_conf'] = $currentUser->id_crmuser;
                 } else {
-                    $arr['id_crmuser'] = (int)$_POST['id_crmuser'];
-                    $arr['id_crmuser_conf'] = (int)$_POST['id_crmuser_conf'];
+                    $arr['id_crmuser'] = (int)$request_input['id_crmuser'];
+                    $arr['id_crmuser_conf'] = (int)$request_input['id_crmuser_conf'];
                 }
 
 
@@ -446,18 +446,18 @@ function handleAction()
                         $arr['source'] = $tm->name_team;
                 }
                 // if (CrmUser::isAdmin($currentUser))
-                // 	$arr['id_parrain'] = $_POST['id_parrain'];
+                // 	$arr['id_parrain'] = $request_input['id_parrain'];
 
-                //if ((int)$_POST['id_statuscont'] == 4 || (int)$_POST['id_statuscont'] == 13)  //Fiche ok OU devis a faire
+                //if ((int)$request_input['id_statuscont'] == 4 || (int)$request_input['id_statuscont'] == 13)  //Fiche ok OU devis a faire
                 //$arr['date_valid'] = date('Y-m-d H:i:s');
 
                 //entrepot le plus proche
-                if ((float)$_POST['geolat'] != 0 || (float)$_POST['geolng'] != 0) {
-                    $ent = Entrepot::getNearFromLatLng((float)$_POST['geolat'], (float)$_POST['geolng']);
+                if ((float)$request_input['geolat'] != 0 || (float)$request_input['geolng'] != 0) {
+                    $ent = Entrepot::getNearFromLatLng((float)$request_input['geolat'], (float)$request_input['geolng']);
                     if ($ent) {
                         $arr['id_entrepot_near'] = $ent->id_entrepot;
 
-                        $strinfo = Tool::getDirection((float)$_POST['geolat'], (float)$_POST['geolng'], $ent->geolat, $ent->geolng, '');
+                        $strinfo = Tool::getDirection((float)$request_input['geolat'], (float)$request_input['geolng'], $ent->geolat, $ent->geolng, '');
                         if ($strinfo && !empty($strinfo)) {
                             //calcul google map (google direction)
                             $info = json_decode($strinfo);
@@ -483,7 +483,7 @@ function handleAction()
                     }
                 }
 
-                foreach ($_POST as $k => $v) {
+                foreach ($request_input as $k => $v) {
                     if (strpos($k, 'q_') !== false)
                         $arr[$k] = $v;
                 }
@@ -503,13 +503,13 @@ function handleAction()
             break;
 
         case 'update-quest':
-            if (!checkFields($_POST, array('id_contact')))
+            if (!checkFields($request_input, array('id_contact')))
                 errorJSON(array('message' => 'Informations incorrectes'));
 
-            if ((int)$_POST['id_contact'] > 0) {
+            if ((int)$request_input['id_contact'] > 0) {
                 //update mode
 
-                $usr = Contact::findOne(array('c.id_contact' => $_POST['id_contact']));
+                $usr = Contact::findOne(array('c.id_contact' => $request_input['id_contact']));
                 if (!$usr)
                     errorJSON(array('message' => 'Client / Prospect inexistant'));
 
@@ -517,13 +517,13 @@ function handleAction()
                     'date_update' => date('Y-m-d H:i:s')
                 );
 
-                foreach ($_POST as $k => $v) {
+                foreach ($request_input as $k => $v) {
                     if (strpos($k, 'q_') !== false)
                         $arr[$k] = $v;
                 }
 
-                if (Contact::update($arr, array('id_contact' => $_POST['id_contact']))) {
-                    CrmAction::create(array('id_crmuser' => $currentUser->id_crmuser, 'table_action' => 'Contacts', 'id_entity' => $_POST['id_contact'], 'type_action' => 'MODIFICATION QUESTIONNAIRE', 'date_action' => date('Y-m-d H:i:s'), 'details_action' => Tool::arrayToStr($arr)));
+                if (Contact::update($arr, array('id_contact' => $request_input['id_contact']))) {
+                    CrmAction::create(array('id_crmuser' => $currentUser->id_crmuser, 'table_action' => 'Contacts', 'id_entity' => $request_input['id_contact'], 'type_action' => 'MODIFICATION QUESTIONNAIRE', 'date_action' => date('Y-m-d H:i:s'), 'details_action' => Tool::arrayToStr($arr)));
                     successJSON(array('OK' => 'OK'));
                 }
             }
@@ -531,29 +531,29 @@ function handleAction()
             break;
 
         case 'update-fisc':
-            if (!checkFields($_POST, array('id_contact')))
+            if (!checkFields($request_input, array('id_contact')))
                 errorJSON(array('message' => 'Informations incorrectes'));
 
-            if ((int)$_POST['id_contact'] > 0) {
+            if ((int)$request_input['id_contact'] > 0) {
                 //update mode
 
-                $usr = Contact::findOne(array('c.id_contact' => $_POST['id_contact']));
+                $usr = Contact::findOne(array('c.id_contact' => $request_input['id_contact']));
                 if (!$usr)
                     errorJSON(array('message' => 'Client / Prospect inexistant'));
 
                 $arr = array(
                     'date_update' => date('Y-m-d H:i:s'),
-                    'q_impot_html' => isset($_POST['htmlimp']) ? $_POST['htmlimp'] : ''
+                    'q_impot_html' => isset($request_input['htmlimp']) ? $request_input['htmlimp'] : ''
                 );
 
-                foreach ($_POST as $k => $v) {
+                foreach ($request_input as $k => $v) {
                     if (strpos($k, 'q_') !== false)
                         $arr[$k] = $v;
                 }
 
-                if (Contact::update($arr, array('id_contact' => $_POST['id_contact']))) {
+                if (Contact::update($arr, array('id_contact' => $request_input['id_contact']))) {
                     unset($arr['q_impot_html']);
-                    CrmAction::create(array('id_crmuser' => $currentUser->id_crmuser, 'table_action' => 'Contacts', 'id_entity' => $_POST['id_contact'], 'type_action' => 'MODIFICATION INFOS FISCALES', 'date_action' => date('Y-m-d H:i:s'), 'details_action' => Tool::arrayToStr($arr)));
+                    CrmAction::create(array('id_crmuser' => $currentUser->id_crmuser, 'table_action' => 'Contacts', 'id_entity' => $request_input['id_contact'], 'type_action' => 'MODIFICATION INFOS FISCALES', 'date_action' => date('Y-m-d H:i:s'), 'details_action' => Tool::arrayToStr($arr)));
                     successJSON(array('OK' => 'OK'));
                 }
             }
@@ -649,31 +649,31 @@ function handleAction()
                     $note = '';
                     for ($col = 0; $col < $highestColumnIndex; ++$col) {
                         $val = trim($worksheet->getCellByColumnAndRow($col, $row)->getValue());
-                        if (isset($_POST['col_' . $col]) && $_POST['col_' . $col] != '0' && $_POST['col_' . $col] != 'note') {
-                            if ($_POST['col_' . $col] == 'id_statuscont') {
+                        if (isset($request_input['col_' . $col]) && $request_input['col_' . $col] != '0' && $request_input['col_' . $col] != 'note') {
+                            if ($request_input['col_' . $col] == 'id_statuscont') {
                                 $st = Setting::getStatus(array('name_statuscont' => $val));
                                 if ($st)
                                     $val = $st->id_statuscont;
                                 else
                                     $val = 1; //default status new
                             } else
-                                if ($_POST['col_' . $col] == 'id_crmuser' || $_POST['col_' . $col] == 'id_crmuser_conf') {
+                                if ($request_input['col_' . $col] == 'id_crmuser' || $request_input['col_' . $col] == 'id_crmuser_conf') {
                                     $usr = CrmUser::findOne(array('email' => $val));
                                     if ($usr)
                                         $val = $usr->id_crmuser;
                                     else
                                         $val = 0;
                                 } else
-                                    if ($_POST['col_' . $col] == 'date_create') {
+                                    if ($request_input['col_' . $col] == 'date_create') {
                                         $val = Tool::dmYtoYmd($val);
                                     } else
-                                        if ($_POST['col_' . $col] == 'q_type_chauffage') {
+                                        if ($request_input['col_' . $col] == 'q_type_chauffage') {
                                             $val = str_replace(' ', ',', trim(str_replace('|', ' ', $val)));
                                         }
 
-                            $arr[$_POST['col_' . $col]] = $val;
+                            $arr[$request_input['col_' . $col]] = $val;
                         } else
-                            if ($_POST['col_' . $col] == 'note')
+                            if ($request_input['col_' . $col] == 'note')
                                 $note = $val;
                     }
 
@@ -716,13 +716,13 @@ function handleAction()
             break;
 
         case 'delete-contacts':
-            if (!checkFields($_POST, array('rws')))
+            if (!checkFields($request_input, array('rws')))
                 errorJSON(array('message' => 'Informations incorrectes'));
 
-            if (count($_POST['rws']) == 0)
+            if (count($request_input['rws']) == 0)
                 errorJSON(array('message' => 'Informations incorrectes'));
 
-            foreach ($_POST['rws'] as $idc) {
+            foreach ($request_input['rws'] as $idc) {
                 CrmAction::create(array('id_crmuser' => $currentUser->id_crmuser, 'table_action' => 'Contacts', 'id_entity' => $idc, 'type_action' => 'CONTACT SUPPRESSION', 'date_action' => date('Y-m-d H:i:s')));
                 Contact::delete(array('id_contact' => $idc));
                 RDV::delete(array('id_contact' => $idc));
@@ -735,21 +735,21 @@ function handleAction()
             break;
 
         case 'assign-contacts':
-            if (!checkFields($_POST, array('rws', 'assid_crmuser', 'id_profil')))
+            if (!checkFields($request_input, array('rws', 'assid_crmuser', 'id_profil')))
                 errorJSON(array('message' => 'Informations incorrectes'));
 
 
-            $cuser = CrmUser::findOne(array('id_crmuser' => (int)$_POST['assid_crmuser']));
+            $cuser = CrmUser::findOne(array('id_crmuser' => (int)$request_input['assid_crmuser']));
             if (!$cuser)
                 errorJSON(array('message' => 'Informations incorrectes'));
 
-            foreach ($_POST['rws'] as $idc) {
-                CrmAction::create(array('id_crmuser' => $currentUser->id_crmuser, 'table_action' => 'Contacts', 'id_entity' => $idc, 'type_action' => 'CONTACT ASSIGNATION ' . (CrmUser::isTelepro($_POST['id_profil']) ? 'TELEPRO' : 'CONFIRMATEUR'), 'date_action' => date('Y-m-d H:i:s'), 'details_action' => $cuser->user_name));
+            foreach ($request_input['rws'] as $idc) {
+                CrmAction::create(array('id_crmuser' => $currentUser->id_crmuser, 'table_action' => 'Contacts', 'id_entity' => $idc, 'type_action' => 'CONTACT ASSIGNATION ' . (CrmUser::isTelepro($request_input['id_profil']) ? 'TELEPRO' : 'CONFIRMATEUR'), 'date_action' => date('Y-m-d H:i:s'), 'details_action' => $cuser->user_name));
                 $arraupd = array();
-                if (CrmUser::isTelepro($_POST['id_profil']))
-                    $arrupd['id_crmuser'] = (int)$_POST['assid_crmuser'];
+                if (CrmUser::isTelepro($request_input['id_profil']))
+                    $arrupd['id_crmuser'] = (int)$request_input['assid_crmuser'];
                 else
-                    $arrupd['id_crmuser_conf'] = (int)$_POST['assid_crmuser'];
+                    $arrupd['id_crmuser_conf'] = (int)$request_input['assid_crmuser'];
 
                 Contact::update($arrupd, array('id_contact' => $idc));
             }
@@ -758,28 +758,28 @@ function handleAction()
             break;
 
         case 'changest-contacts':
-            if (!checkFields($_POST, array('rws', 'stcont', 'id_statuscont')))
+            if (!checkFields($request_input, array('rws', 'stcont', 'id_statuscont')))
                 errorJSON(array('message' => 'Informations incorrectes'));
 
-            $st = Setting::getStatus(array('id_statuscont' => (int)$_POST['id_statuscont']));
+            $st = Setting::getStatus(array('id_statuscont' => (int)$request_input['id_statuscont']));
             if (!$st)
                 errorJSON(array('message' => 'Informations incorrectes'));
 
-            if ((int)$_POST['stcont'] > 0) {
-                CrmAction::create(array('id_crmuser' => $currentUser->id_crmuser, 'table_action' => 'Contacts', 'id_entity' => (int)$_POST['stcont'], 'type_action' => 'CONTACT CHANGE STATUT', 'date_action' => date('Y-m-d H:i:s'), 'details_action' => $st->name_statuscont));
+            if ((int)$request_input['stcont'] > 0) {
+                CrmAction::create(array('id_crmuser' => $currentUser->id_crmuser, 'table_action' => 'Contacts', 'id_entity' => (int)$request_input['stcont'], 'type_action' => 'CONTACT CHANGE STATUT', 'date_action' => date('Y-m-d H:i:s'), 'details_action' => $st->name_statuscont));
 
                 $arr = array(
-                    'id_statuscont' => (int)$_POST['id_statuscont'],
+                    'id_statuscont' => (int)$request_input['id_statuscont'],
                     'date_update' => date('Y-m-d H:i:s')
                 );
 
-                Contact::update($arr, array('id_contact' => (int)$_POST['stcont']));
+                Contact::update($arr, array('id_contact' => (int)$request_input['stcont']));
             } else {
-                foreach ($_POST['rws'] as $idc) {
+                foreach ($request_input['rws'] as $idc) {
                     CrmAction::create(array('id_crmuser' => $currentUser->id_crmuser, 'table_action' => 'Contacts', 'id_entity' => $idc, 'type_action' => 'CONTACT CHANGE STATUT', 'date_action' => date('Y-m-d H:i:s'), 'details_action' => $st->name_statuscont));
 
                     $arr = array(
-                        'id_statuscont' => (int)$_POST['id_statuscont'],
+                        'id_statuscont' => (int)$request_input['id_statuscont'],
                         'date_update' => date('Y-m-d H:i:s')
                     );
 
@@ -791,46 +791,46 @@ function handleAction()
             break;
 
         case 'changestconf-contacts':
-            if (!checkFields($_POST, array('rws', 'stcontconf', 'id_statuscontconf')))
+            if (!checkFields($request_input, array('rws', 'stcontconf', 'id_statuscontconf')))
                 errorJSON(array('message' => 'Informations incorrectes'));
 
-            $st = Setting::getStatusConf(array('id_statuscontconf' => (int)$_POST['id_statuscontconf']));
+            $st = Setting::getStatusConf(array('id_statuscontconf' => (int)$request_input['id_statuscontconf']));
             if (!$st)
                 errorJSON(array('message' => 'Informations incorrectes'));
 
-            if ((int)$_POST['stcontconf'] > 0) {
-                CrmAction::create(array('id_crmuser' => $currentUser->id_crmuser, 'table_action' => 'Contacts', 'id_entity' => (int)$_POST['stcontconf'], 'type_action' => 'CONTACT CHANGE STATUT', 'date_action' => date('Y-m-d H:i:s'), 'details_action' => $st->name_statuscont));
+            if ((int)$request_input['stcontconf'] > 0) {
+                CrmAction::create(array('id_crmuser' => $currentUser->id_crmuser, 'table_action' => 'Contacts', 'id_entity' => (int)$request_input['stcontconf'], 'type_action' => 'CONTACT CHANGE STATUT', 'date_action' => date('Y-m-d H:i:s'), 'details_action' => $st->name_statuscont));
 
                 $arr = array(
-                    'id_statuscontconf' => (int)$_POST['id_statuscontconf'],
+                    'id_statuscontconf' => (int)$request_input['id_statuscontconf'],
                     'date_update' => date('Y-m-d H:i:s')
                 );
 
-                /*if ((int)$_POST['id_statuscont'] == 4 || (int)$_POST['id_statuscont'] == 13)
+                /*if ((int)$request_input['id_statuscont'] == 4 || (int)$request_input['id_statuscont'] == 13)
                     $arr['date_valid'] = date('Y-m-d H:i:s');
                 else
-                if ((int)$_POST['id_statuscont'] == 10) { //Installe
-                    $rdv = RDV::findOne(array('id_contact' => $_POST['stcontconf']));
+                if ((int)$request_input['id_statuscont'] == 10) { //Installe
+                    $rdv = RDV::findOne(array('id_contact' => $request_input['stcontconf']));
                     if ($rdv)
                         $arr['date_install'] = $rdv->date_rdv;
                 }*/
 
-                Contact::update($arr, array('id_contact' => (int)$_POST['stcontconf']));
+                Contact::update($arr, array('id_contact' => (int)$request_input['stcontconf']));
             }
             //Multi ligne
             /*else {
-                foreach ($_POST['rws'] as $idc) {
+                foreach ($request_input['rws'] as $idc) {
                     CrmAction::create(array('id_crmuser' => $currentUser->id_crmuser, 'table_action' => 'Contacts', 'id_entity' => $idc, 'type_action' => 'CONTACT CHANGE STATUT', 'date_action' => date('Y-m-d H:i:s'), 'details_action' => $st->name_statuscont));
 
                     $arr = array(
-                        'id_statuscont' => (int)$_POST['id_statuscont'],
+                        'id_statuscont' => (int)$request_input['id_statuscont'],
                         'date_update' => date('Y-m-d H:i:s')
                     );
 
-                    if ((int)$_POST['id_statuscont'] == 4 || (int)$_POST['id_statuscont'] == 13)
+                    if ((int)$request_input['id_statuscont'] == 4 || (int)$request_input['id_statuscont'] == 13)
                         $arr['date_valid'] = date('Y-m-d H:i:s');
                     else
-                    if ((int)$_POST['id_statuscont'] == 10) { //Installe
+                    if ((int)$request_input['id_statuscont'] == 10) { //Installe
                         $rdv = RDV::findOne(array('id_contact' => $idc));
                         if ($rdv)
                             $arr['date_install'] = $rdv->date_rdv;
@@ -844,50 +844,50 @@ function handleAction()
             break;
 
         case 'add-comment':
-            if (!checkFields($_POST, array('id_contact', 'comment')))
+            if (!checkFields($request_input, array('id_contact', 'comment')))
                 errorJSON(array('message' => 'Informations incorrectes'));
 
             $inits = $currentUser->user_name; //Tool::getInitials($currentUser->user_name);
 
-            if ($idc = Comment::create(array('id_contact' => $_POST['id_contact'], 'date_comment' => date('Y-m-d H:i:s'), 'text_comment' => $inits . ' : ' . $_POST['comment']))) {
-                CrmAction::create(array('id_crmuser' => $currentUser->id_crmuser, 'table_action' => 'Contacts', 'id_entity' => $_POST['id_contact'], 'type_action' => 'AJOUT COMMENTAIRE', 'date_action' => date('Y-m-d H:i:s'), 'details_action' => $_POST['comment']));
+            if ($idc = Comment::create(array('id_contact' => $request_input['id_contact'], 'date_comment' => date('Y-m-d H:i:s'), 'text_comment' => $inits . ' : ' . $request_input['comment']))) {
+                CrmAction::create(array('id_crmuser' => $currentUser->id_crmuser, 'table_action' => 'Contacts', 'id_entity' => $request_input['id_contact'], 'type_action' => 'AJOUT COMMENTAIRE', 'date_action' => date('Y-m-d H:i:s'), 'details_action' => $request_input['comment']));
                 successJSON(array('OK' => 'OK', 'id_comment' => $idc, 'inits' => $inits));
             }
             break;
 
         case 'update-comment-chantier':
-            if (!checkFields($_POST, array('id_contact', 'comment')))
+            if (!checkFields($request_input, array('id_contact', 'comment')))
                 errorJSON(array('message' => 'Informations incorrectes'));
 
-            if (Contact::update(array('comment' => $_POST['comment']), array('id_contact' => (int)$_POST['id_contact']))) {
-                CrmAction::create(array('id_crmuser' => $currentUser->id_crmuser, 'table_action' => 'Contacts', 'id_entity' => $_POST['id_contact'], 'type_action' => 'MISE A JOUR COMMENTAIRE CHANTIER', 'date_action' => date('Y-m-d H:i:s'), 'details_action' => $_POST['comment']));
+            if (Contact::update(array('comment' => $request_input['comment']), array('id_contact' => (int)$request_input['id_contact']))) {
+                CrmAction::create(array('id_crmuser' => $currentUser->id_crmuser, 'table_action' => 'Contacts', 'id_entity' => $request_input['id_contact'], 'type_action' => 'MISE A JOUR COMMENTAIRE CHANTIER', 'date_action' => date('Y-m-d H:i:s'), 'details_action' => $request_input['comment']));
                 successJSON(array('OK' => 'OK'));
             }
             break;
 
         case 'delete-comment':
-            if (!checkFields($_POST, array('id_comment')))
+            if (!checkFields($request_input, array('id_comment')))
                 errorJSON(array('message' => 'Informations incorrectes'));
 
-            $com = Comment::findOne(array('id_comment' => (int)$_POST['id_comment']));
+            $com = Comment::findOne(array('id_comment' => (int)$request_input['id_comment']));
             if (!$com)
                 errorJSON(array('message' => 'Informations incorrectes'));
 
-            if (Comment::delete(array('id_comment' => $_POST['id_comment']))) {
+            if (Comment::delete(array('id_comment' => $request_input['id_comment']))) {
                 CrmAction::create(array('id_crmuser' => $currentUser->id_crmuser, 'table_action' => 'Contacts', 'id_entity' => $com->id_contact, 'type_action' => 'SUPPRESSION COMMENTAIRE', 'date_action' => date('Y-m-d H:i:s'), 'details_action' => $com->text_comment));
                 successJSON(array('OK' => 'OK'));
             }
             break;
 
         case 'add-recall':
-            if (!checkFields($_POST, array('id_contact', 'date_recall', 'time_recall')))
+            if (!checkFields($request_input, array('id_contact', 'date_recall', 'time_recall')))
                 errorJSON(array('message' => 'Informations incorrectes'));
 
-            $dtrecall = Tool::dmYtoYmd($_POST['date_recall']) . ' ' . $_POST['time_recall'];
+            $dtrecall = Tool::dmYtoYmd($request_input['date_recall']) . ' ' . $request_input['time_recall'];
             $txtcomment = 'Client à rappeler le <br>' . date('d/m/Y à H:i', strtotime($dtrecall));
 
-            if ($idc = Comment::create(array('id_contact' => $_POST['id_contact'], 'date_comment' => date('Y-m-d H:i:s'), 'text_comment' => $txtcomment, 'type_comment' => '1', 'date_recall' => $dtrecall, 'id_user_comment' => $currentUser->id_crmuser))) {
-                CrmAction::create(array('id_crmuser' => $currentUser->id_crmuser, 'table_action' => 'Contacts', 'id_entity' => $_POST['id_contact'], 'type_action' => 'AJOUT RAPPEL', 'date_action' => date('Y-m-d H:i:s'), 'details_action' => $txtcomment));
+            if ($idc = Comment::create(array('id_contact' => $request_input['id_contact'], 'date_comment' => date('Y-m-d H:i:s'), 'text_comment' => $txtcomment, 'type_comment' => '1', 'date_recall' => $dtrecall, 'id_user_comment' => $currentUser->id_crmuser))) {
+                CrmAction::create(array('id_crmuser' => $currentUser->id_crmuser, 'table_action' => 'Contacts', 'id_entity' => $request_input['id_contact'], 'type_action' => 'AJOUT RAPPEL', 'date_action' => date('Y-m-d H:i:s'), 'details_action' => $txtcomment));
                 successJSON(array('OK' => 'OK', 'comment' => $txtcomment, 'id_comment' => $idc));
             }
             break;
@@ -895,10 +895,10 @@ function handleAction()
         case 'check-recall':
             if (CrmUser::isAdmin($currentUser))
                 errorJSON(array('message' => ''));
-            if (!checkFields($_POST, array('tm')))
+            if (!checkFields($request_input, array('tm')))
                 errorJSON(array('message' => 'Informations incorrectes'));
 
-            $when = new DateTime(explode('(', $_POST['tm'])[0]);
+            $when = new DateTime(explode('(', $request_input['tm'])[0]);
             $dt = $when->format('Y-m-d H:i:s');
             $recall = Comment::getFirstRecall($dt, $currentUser->id_crmuser);
             if ($recall)
@@ -907,52 +907,52 @@ function handleAction()
             break;
 
         case 'wait-recall':
-            if (!checkFields($_POST, array('idcom', 'idcli')))
+            if (!checkFields($request_input, array('idcom', 'idcli')))
                 errorJSON(array('message' => 'Informations incorrectes'));
 
-            $com = Comment::findOne(array('id_comment' => (int)$_POST['idcom'], 'id_contact' => (int)$_POST['idcli']));
+            $com = Comment::findOne(array('id_comment' => (int)$request_input['idcom'], 'id_contact' => (int)$request_input['idcli']));
             if (!$com)
                 errorJSON(array('message' => 'Rappel inexistant'));
 
-            $when = new DateTime(explode('(', $_POST['tm'])[0]);
-            $when->add(new DateInterval('PT' . (int)$_POST['tp'] . 'M'));
+            $when = new DateTime(explode('(', $request_input['tm'])[0]);
+            $when->add(new DateInterval('PT' . (int)$request_input['tp'] . 'M'));
             $dt = $when->format('Y-m-d H:i:s');
 
-            Comment::update(array('date_recall' => $dt), array('id_comment' => (int)$_POST['idcom']));
+            Comment::update(array('date_recall' => $dt), array('id_comment' => (int)$request_input['idcom']));
             successJSON(array('OK' => 'OK'));
             break;
 
         case 'read-recall':
-            if (!checkFields($_POST, array('idcom', 'idcli')))
+            if (!checkFields($request_input, array('idcom', 'idcli')))
                 errorJSON(array('message' => 'Informations incorrectes'));
 
-            $com = Comment::findOne(array('id_comment' => (int)$_POST['idcom'], 'id_contact' => (int)$_POST['idcli']));
+            $com = Comment::findOne(array('id_comment' => (int)$request_input['idcom'], 'id_contact' => (int)$request_input['idcli']));
             if (!$com)
                 errorJSON(array('message' => 'Rappel inexistant'));
 
-            Comment::update(array('is_read' => '1'), array('id_comment' => (int)$_POST['idcom']));
+            Comment::update(array('is_read' => '1'), array('id_comment' => (int)$request_input['idcom']));
             successJSON(array('OK' => 'OK'));
             break;
 
         case 'upload-doc':
             if (!checkFields($_FILES, array('file')))
                 errorJSON(array('message' => 'Informations incorrectes'));
-            if (!checkFields($_POST, array('id_contact')))
+            if (!checkFields($request_input, array('id_contact')))
                 errorJSON(array('message' => 'Informations incorrectes'));
 
             $URL = getenv('APP_URL') ?: 'https://lsf-crm-v2.herokuapp.com/';
 
             $dirup = __DIR__ . '/storage/uploads/';
-            $dir = $dirup . $_POST['codekey'] . $_POST['id_contact'];
+            $dir = $dirup . $request_input['codekey'] . $request_input['id_contact'];
             if (!is_dir($dir)) {
                 mkdir($dir);
                 copy($dirup . 'index.php', $dir . '/index.php');
             }
 
             if ($fl = Tool::uploadFile($dir . '/', $_FILES['file'])) {
-                $filename = $URL . '/storage/uploads/' . $_POST['codekey'] . $_POST['id_contact'] . '/' . $fl;
-                if ($iddoc = Doc::create(array('id_contact' => (int)$_POST['id_contact'], 'date_doc' => date('Y-m-d H:i:s'), 'name_doc' => $filename))) {
-                    CrmAction::create(array('id_crmuser' => $currentUser->id_crmuser, 'table_action' => 'Contacts', 'id_entity' => $_POST['id_contact'], 'type_action' => 'AJOUT DOCUMENT', 'date_action' => date('Y-m-d H:i:s'), 'details_action' => $filename));
+                $filename = $URL . '/storage/uploads/' . $request_input['codekey'] . $request_input['id_contact'] . '/' . $fl;
+                if ($iddoc = Doc::create(array('id_contact' => (int)$request_input['id_contact'], 'date_doc' => date('Y-m-d H:i:s'), 'name_doc' => $filename))) {
+                    CrmAction::create(array('id_crmuser' => $currentUser->id_crmuser, 'table_action' => 'Contacts', 'id_entity' => $request_input['id_contact'], 'type_action' => 'AJOUT DOCUMENT', 'date_action' => date('Y-m-d H:i:s'), 'details_action' => $filename));
                     successJSON(array('filename' => $filename, 'fl' => $fl, 'id_doc' => $iddoc, 'isimage' => Tool::isImage($filename) ? '1' : '0'));
                 }
             }
@@ -960,14 +960,14 @@ function handleAction()
             break;
 
         case 'delete-doc':
-            if (!checkFields($_POST, array('iddoc')))
+            if (!checkFields($request_input, array('iddoc')))
                 errorJSON(array('message' => 'Informations incorrectes'));
 
-            $doc = Doc::findOne(array('id_doc' => (int)$_POST['iddoc']));
+            $doc = Doc::findOne(array('id_doc' => (int)$request_input['iddoc']));
             if (!$doc)
                 errorJSON(array('message' => 'Informations incorrectes'));
 
-            if (Doc::delete(array('id_doc' => (int)$_POST['iddoc']))) {
+            if (Doc::delete(array('id_doc' => (int)$request_input['iddoc']))) {
                 CrmAction::create(array('id_crmuser' => $currentUser->id_crmuser, 'table_action' => 'Contacts', 'id_entity' => $doc->id_contact, 'type_action' => 'SUPPRESSION DOCUMENT', 'date_action' => date('Y-m-d H:i:s'), 'details_action' => $doc->name_doc));
                 successJSON(array('OK' => 'OK'));
             }
@@ -975,7 +975,7 @@ function handleAction()
             break;
 
         case 'sync-fisc':
-            if (!checkFields($_POST, array('nofisc1', 'refavis1')))
+            if (!checkFields($request_input, array('nofisc1', 'refavis1')))
                 errorJSON(array('message' => 'Informations incorrectes'));
 
 
@@ -985,14 +985,14 @@ function handleAction()
             $globnbfoyer = 0;
 
             for ($numavis = 1; $numavis <= 5; $numavis++) {
-                if (checkFields($_POST, array('nofisc' . $numavis, 'refavis' . $numavis))) {
+                if (checkFields($request_input, array('nofisc' . $numavis, 'refavis' . $numavis))) {
                     $body = '';
                     $elms = '';
                     $nbperson = 0;
                     $rev = 0;
                     $oldkey = '';
 
-                    getInfoImpot($_POST['nofisc' . $numavis], $_POST['refavis' . $numavis], $body, $elms);
+                    getInfoImpot($request_input['nofisc' . $numavis], $request_input['refavis' . $numavis], $body, $elms);
 
                     foreach ($elms as $elm) {
                         if ($oldkey == 'Situation de famille') {
@@ -1021,7 +1021,7 @@ function handleAction()
             /* OLD
             $body = '';
             $elms = '';
-            getInfoImpot(trim($_POST['nofisc1']), trim($_POST['refavis1']), $body, $elms);
+            getInfoImpot(trim($request_input['nofisc1']), trim($request_input['refavis1']), $body, $elms);
 
             $nbperson = 0;
             $rev = 0;
@@ -1071,8 +1071,8 @@ function handleAction()
 
             $body2 = '';
             $elms = '';
-            if (checkFields($_POST, array('nofisc2', 'refavis2'))) {
-                getInfoImpot($_POST['nofisc2'], $_POST['refavis2'], $body2, $elms);
+            if (checkFields($request_input, array('nofisc2', 'refavis2'))) {
+                getInfoImpot($request_input['nofisc2'], $request_input['refavis2'], $body2, $elms);
 
                 foreach ($elms as $elm) {
                     if ($oldkey == 'Revenu fiscal de référence')
@@ -1087,18 +1087,18 @@ function handleAction()
             break;
 
         case 'update-dir':
-            if (!checkFields($_POST, array('id_contact', 'revenu_fiscal', 'nb_person'))) /*'id_installator', 'id_mandator', 'id_contributor', */
+            if (!checkFields($request_input, array('id_contact', 'revenu_fiscal', 'nb_person'))) /*'id_installator', 'id_mandator', 'id_contributor', */
                 errorJSON(array('message' => 'Informations incorrectes'));
 
-            if ((!isset($_POST['101_m2']) || (float)$_POST['101_m2'] == 0) && (!isset($_POST['102_m2']) || (float)$_POST['102_m2'] == 0) && (!isset($_POST['103_m2']) || (float)$_POST['103_m2'] == 0))
+            if ((!isset($request_input['101_m2']) || (float)$request_input['101_m2'] == 0) && (!isset($request_input['102_m2']) || (float)$request_input['102_m2'] == 0) && (!isset($request_input['103_m2']) || (float)$request_input['103_m2'] == 0))
                 errorJSON(array('message' => 'Veuillez renseigner la surface des travaux 101, 102, 103'));
 
-            $contact = Contact::findOne(array('c.id_contact' => (int)$_POST['id_contact']));
+            $contact = Contact::findOne(array('c.id_contact' => (int)$request_input['id_contact']));
             if (!$contact)
                 errorJSON(array('message' => 'Client inexistant'));
 
             //$isidf = Setting::isIDF($contact->post_code);
-            $preca = Setting::getPrecarityInfo($contact->post_code, (float)$_POST['revenu_fiscal'], (int)$_POST['nb_person'], $_POST['type_chauf'], (float)$_POST['101_m2'], (float)$_POST['102_m2'], (float)$_POST['103_m2']);
+            $preca = Setting::getPrecarityInfo($contact->post_code, (float)$request_input['revenu_fiscal'], (int)$request_input['nb_person'], $request_input['type_chauf'], (float)$request_input['101_m2'], (float)$request_input['102_m2'], (float)$request_input['103_m2']);
             if (count($preca) == 0)
                 errorJSON(array('message' => 'Erreur au calcul des informations de précarité et bonus'));
 
@@ -1109,44 +1109,44 @@ function handleAction()
             $bonus101 = isset($preca['bonus101']) ? (float)$preca['bonus101'] : 0;
             $bonus102 = isset($preca['bonus102']) ? (float)$preca['bonus102'] : 0;
             $bonus103 = isset($preca['bonus103']) ? (float)$preca['bonus103'] : 0;
-            $totht = ($px101 * (float)$_POST['101_m2']) + ($px102 * (float)$_POST['102_m2']) + ($px103 * (float)$_POST['103_m2']);
+            $totht = ($px101 * (float)$request_input['101_m2']) + ($px102 * (float)$request_input['102_m2']) + ($px103 * (float)$request_input['103_m2']);
             $tva = $totht * ($sets->TX_TVA / 100);
             $ttc = $totht + $tva;
-            $bonus = ($bonus101 * (float)$_POST['101_m2']) + ($bonus102 * (float)$_POST['102_m2']) + ($bonus103 * (float)$_POST['103_m2']);
+            $bonus = ($bonus101 * (float)$request_input['101_m2']) + ($bonus102 * (float)$request_input['102_m2']) + ($bonus103 * (float)$request_input['103_m2']);
 
-            $dtinvoice = isset($_POST['date_invoice']) && $_POST['date_invoice'] != '' ? Tool::dmYtoYmd($_POST['date_invoice']) : '';
+            $dtinvoice = isset($request_input['date_invoice']) && $request_input['date_invoice'] != '' ? Tool::dmYtoYmd($request_input['date_invoice']) : '';
             $arr = array(
                 'id_contact' => $contact->id_contact,
-                'id_mandator' => isset($_POST['id_mandator']) ? (int)$_POST['id_mandator'] : 0,
-                'id_contributor' => isset($_POST['id_contributor']) ? (int)$_POST['id_contributor'] : 0,
-                'id_installator' => isset($_POST['id_installator']) ? (int)$_POST['id_installator'] : 0,
-                'no_fiscal_1' => trim($_POST['no_fiscal_1']),
-                'no_fiscal_2' => trim($_POST['no_fiscal_2']),
-                'no_fiscal_3' => trim($_POST['no_fiscal_3']),
-                'no_fiscal_4' => trim($_POST['no_fiscal_4']),
-                'no_fiscal_5' => trim($_POST['no_fiscal_5']),
-                'ref_avis_1' => trim($_POST['ref_avis_1']),
-                'ref_avis_2' => trim($_POST['ref_avis_2']),
-                'ref_avis_3' => trim($_POST['ref_avis_3']),
-                'ref_avis_4' => trim($_POST['ref_avis_4']),
-                'ref_avis_5' => trim($_POST['ref_avis_5']),
-                'type_chauf' => $_POST['type_chauf'],
-                'occupation' => $_POST['occupation'],
-                'revenu_fiscal' => $_POST['revenu_fiscal'],
-                'nb_foyer' => $_POST['nb_foyer'],
-                'nb_person' => $_POST['nb_person'],
-                'chantier_status' => isset($_POST['chantier_status']) ? 1 : 0,
-                '101_m2' => $_POST['101_m2'],
-                'id_material_101' => $_POST['id_material_101'],
-                '101_comble_perdu' => isset($_POST['101_comble_perdu']) ? 1 : 0,
-                '101_rem_toiture' => isset($_POST['101_rem_toiture']) ? 1 : 0,
-                '102_m2' => $_POST['102_m2'],
-                'id_material_102' => $_POST['id_material_102'],
-                '103_m2' => $_POST['103_m2'],
-                'id_material_103' => $_POST['id_material_103'],
-                '103_colle' => isset($_POST['103_colle']) ? 1 : 0,
-                '103_clous' => isset($_POST['103_clous']) ? 1 : 0,
-                '103_cheville' => isset($_POST['103_cheville']) ? 1 : 0,
+                'id_mandator' => isset($request_input['id_mandator']) ? (int)$request_input['id_mandator'] : 0,
+                'id_contributor' => isset($request_input['id_contributor']) ? (int)$request_input['id_contributor'] : 0,
+                'id_installator' => isset($request_input['id_installator']) ? (int)$request_input['id_installator'] : 0,
+                'no_fiscal_1' => trim($request_input['no_fiscal_1']),
+                'no_fiscal_2' => trim($request_input['no_fiscal_2']),
+                'no_fiscal_3' => trim($request_input['no_fiscal_3']),
+                'no_fiscal_4' => trim($request_input['no_fiscal_4']),
+                'no_fiscal_5' => trim($request_input['no_fiscal_5']),
+                'ref_avis_1' => trim($request_input['ref_avis_1']),
+                'ref_avis_2' => trim($request_input['ref_avis_2']),
+                'ref_avis_3' => trim($request_input['ref_avis_3']),
+                'ref_avis_4' => trim($request_input['ref_avis_4']),
+                'ref_avis_5' => trim($request_input['ref_avis_5']),
+                'type_chauf' => $request_input['type_chauf'],
+                'occupation' => $request_input['occupation'],
+                'revenu_fiscal' => $request_input['revenu_fiscal'],
+                'nb_foyer' => $request_input['nb_foyer'],
+                'nb_person' => $request_input['nb_person'],
+                'chantier_status' => isset($request_input['chantier_status']) ? 1 : 0,
+                '101_m2' => $request_input['101_m2'],
+                'id_material_101' => $request_input['id_material_101'],
+                '101_comble_perdu' => isset($request_input['101_comble_perdu']) ? 1 : 0,
+                '101_rem_toiture' => isset($request_input['101_rem_toiture']) ? 1 : 0,
+                '102_m2' => $request_input['102_m2'],
+                'id_material_102' => $request_input['id_material_102'],
+                '103_m2' => $request_input['103_m2'],
+                'id_material_103' => $request_input['id_material_103'],
+                '103_colle' => isset($request_input['103_colle']) ? 1 : 0,
+                '103_clous' => isset($request_input['103_clous']) ? 1 : 0,
+                '103_cheville' => isset($request_input['103_cheville']) ? 1 : 0,
                 '101_pu' => $px101,
                 '102_pu' => $px102,
                 '103_pu' => $px103,
@@ -1163,23 +1163,23 @@ function handleAction()
                 'mttva' => $tva,
                 'totttc' => $ttc,
                 'mtcontrib' => (int)$preca['preca'] == 2 ? $ttc - 1 : $bonus,
-                'impot_html' => trim($_POST['htmlimp'])
+                'impot_html' => trim($request_input['htmlimp'])
             );
 
-            if (isset($_POST['date_devis']) && $_POST['date_devis'] != '')
-                $arr['date_devis'] = Tool::dmYtoYmd($_POST['date_devis']);
+            if (isset($request_input['date_devis']) && $request_input['date_devis'] != '')
+                $arr['date_devis'] = Tool::dmYtoYmd($request_input['date_devis']);
             if ($dtinvoice != '')
                 $arr['date_invoice'] = $dtinvoice;
 
-            if (trim($_POST['htmlimp']) != '') {
+            if (trim($request_input['htmlimp']) != '') {
                 $nm = 'AVIS IMPOSITION.pdf';
-                IsoPDFBuilder::BuildContactDoc($contact->codekey . $contact->id_contact, $nm, str_replace('<div id="principal">', '<div id="principal"><div id=date><b>Date d\'impression de l\'avis : ' . date("d-m-Y") . '</b><br/><br/></div>', trim($_POST['htmlimp'])));
+                IsoPDFBuilder::BuildContactDoc($contact->codekey . $contact->id_contact, $nm, str_replace('<div id="principal">', '<div id="principal"><div id=date><b>Date d\'impression de l\'avis : ' . date("d-m-Y") . '</b><br/><br/></div>', trim($request_input['htmlimp'])));
                 if (!Doc::findOne(array('id_contact' => $contact->id_contact, 'name_doc' => $nm)))
                     Doc::create(array('id_contact' => $contact->id_contact, 'date_doc' => date('Y-m-d H:i:s'), 'name_doc' => $nm));
             }
 
             $dorefresh = false;
-            $idp = (int)$_POST['id_prestation'];
+            $idp = (int)$request_input['id_prestation'];
             if ($idp == 0) {
                 $arr['date_create'] = date('Y-m-d H:i:s');
                 $arr['user_create'] = $currentUser->id_crmuser;
@@ -1208,49 +1208,49 @@ function handleAction()
             break;
 
         case 'update-entrepot':
-            if (!checkFields($_POST, array('id_entrepot', 'entrepot_name', 'adr1', 'post_code', 'city', 'tel1', 'email')))
+            if (!checkFields($request_input, array('id_entrepot', 'entrepot_name', 'adr1', 'post_code', 'city', 'tel1', 'email')))
                 errorJSON(array('message' => 'Informations incorrectes'));
 
-            if ((int)$_POST['id_entrepot'] > 0) {
+            if ((int)$request_input['id_entrepot'] > 0) {
                 //update mode
 
-                $usr = Entrepot::findOne(array('id_entrepot' => $_POST['id_entrepot']));
+                $usr = Entrepot::findOne(array('id_entrepot' => $request_input['id_entrepot']));
                 if (!$usr)
                     errorJSON(array('message' => 'Entrepot inexistant'));
 
                 $arr = array(
-                    'entrepot_name' => $_POST['entrepot_name'],
-                    'adr1' => $_POST['adr1'],
-                    'adr2' => $_POST['adr2'],
-                    'post_code' => $_POST['post_code'],
-                    'city' => $_POST['city'],
+                    'entrepot_name' => $request_input['entrepot_name'],
+                    'adr1' => $request_input['adr1'],
+                    'adr2' => $request_input['adr2'],
+                    'post_code' => $request_input['post_code'],
+                    'city' => $request_input['city'],
                     'country' => 'FRANCE',
-                    'tel1' => $_POST['tel1'],
-                    'email' => $_POST['email'],
-                    'comment' => $_POST['comment'],
-                    'geolat' => (float)$_POST['geolat'],
-                    'geolng' => (float)$_POST['geolng'],
+                    'tel1' => $request_input['tel1'],
+                    'email' => $request_input['email'],
+                    'comment' => $request_input['comment'],
+                    'geolat' => (float)$request_input['geolat'],
+                    'geolng' => (float)$request_input['geolng'],
                     'date_update' => date('Y-m-d H:i:s')
                 );
 
-                if (Entrepot::update($arr, array('id_entrepot' => $_POST['id_entrepot']))) {
-                    CrmAction::create(array('id_crmuser' => $currentUser->id_crmuser, 'table_action' => 'Entrepots', 'id_entity' => $_POST['id_entrepot'], 'type_action' => 'MODIFICATION ENTREPOT', 'date_action' => date('Y-m-d H:i:s'), 'details_action' => Tool::arrayToStr($arr)));
+                if (Entrepot::update($arr, array('id_entrepot' => $request_input['id_entrepot']))) {
+                    CrmAction::create(array('id_crmuser' => $currentUser->id_crmuser, 'table_action' => 'Entrepots', 'id_entity' => $request_input['id_entrepot'], 'type_action' => 'MODIFICATION ENTREPOT', 'date_action' => date('Y-m-d H:i:s'), 'details_action' => Tool::arrayToStr($arr)));
                     successJSON(array('OK' => 'OK'));
                 }
             } else {
                 //creation mode
                 $arr = array(
-                    'entrepot_name' => $_POST['entrepot_name'],
-                    'adr1' => $_POST['adr1'],
-                    'adr2' => $_POST['adr2'],
-                    'post_code' => $_POST['post_code'],
-                    'city' => $_POST['city'],
+                    'entrepot_name' => $request_input['entrepot_name'],
+                    'adr1' => $request_input['adr1'],
+                    'adr2' => $request_input['adr2'],
+                    'post_code' => $request_input['post_code'],
+                    'city' => $request_input['city'],
                     'country' => 'FRANCE',
-                    'tel1' => $_POST['tel1'],
-                    'email' => $_POST['email'],
-                    'comment' => $_POST['comment'],
-                    'geolat' => (float)$_POST['geolat'],
-                    'geolng' => (float)$_POST['geolng'],
+                    'tel1' => $request_input['tel1'],
+                    'email' => $request_input['email'],
+                    'comment' => $request_input['comment'],
+                    'geolat' => (float)$request_input['geolat'],
+                    'geolng' => (float)$request_input['geolng'],
                     'date_create' => date('Y-m-d H:i:s')
                 );
 
@@ -1263,75 +1263,75 @@ function handleAction()
             break;
 
         case 'delete-entrepot':
-            if (!checkFields($_POST, array('ident')))
+            if (!checkFields($request_input, array('ident')))
                 errorJSON(array('message' => 'Informations incorrectes'));
 
-            $rdv = RDV::findOne(array('id_entrepot' => (int)$_POST['ident']));
+            $rdv = RDV::findOne(array('id_entrepot' => (int)$request_input['ident']));
             if ($rdv)
                 errorJSON(array('message' => 'Suppresion impossible, il existe des rendez vous rattachés à cet entrepot'));
 
-            Entrepot::delete(array('id_entrepot' => (int)$_POST['ident']));
+            Entrepot::delete(array('id_entrepot' => (int)$request_input['ident']));
 
             successJSON(array('OK' => 'OK'));
             break;
 
         case 'update-installator':
-            if (!checkFields($_POST, array('id_installator', 'installator_name', 'adr1', 'post_code', 'city', 'tel1')))
+            if (!checkFields($request_input, array('id_installator', 'installator_name', 'adr1', 'post_code', 'city', 'tel1')))
                 errorJSON(array('message' => 'Informations incorrectes'));
 
-            if (((int)$_POST['type_msg'] == 1 || (int)$_POST['type_msg'] == 2) && empty($_POST['tel2']))
+            if (((int)$request_input['type_msg'] == 1 || (int)$request_input['type_msg'] == 2) && empty($request_input['tel2']))
                 errorJSON(array('message' => 'Veuillez saisir le numéro de SMS'));
 
-            if ((int)$_POST['id_installator'] > 0) {
+            if ((int)$request_input['id_installator'] > 0) {
                 //update mode
 
-                $usr = Installator::findOne(array('id_installator' => $_POST['id_installator']));
+                $usr = Installator::findOne(array('id_installator' => $request_input['id_installator']));
                 if (!$usr)
                     errorJSON(array('message' => 'Installateur inexistant'));
 
                 $arr = array(
-                    'installator_name' => $_POST['installator_name'],
-                    'first_name_ins' => $_POST['first_name_ins'],
-                    'last_name_ins' => $_POST['last_name_ins'],
-                    'siret_ins' => $_POST['siret_ins'],
-                    'adr1' => $_POST['adr1'],
-                    'adr2' => $_POST['adr2'],
-                    'post_code' => $_POST['post_code'],
-                    'city' => $_POST['city'],
+                    'installator_name' => $request_input['installator_name'],
+                    'first_name_ins' => $request_input['first_name_ins'],
+                    'last_name_ins' => $request_input['last_name_ins'],
+                    'siret_ins' => $request_input['siret_ins'],
+                    'adr1' => $request_input['adr1'],
+                    'adr2' => $request_input['adr2'],
+                    'post_code' => $request_input['post_code'],
+                    'city' => $request_input['city'],
                     'country' => 'FRANCE',
-                    'tel1' => $_POST['tel1'],
-                    'tel2' => $_POST['tel2'],
-                    'comment' => $_POST['comment'],
-                    'type_msg' => (int)$_POST['type_msg'],
-                    'agenda_id' => $_POST['agenda_id'],
-                    'geolat' => (float)$_POST['geolat'],
-                    'geolng' => (float)$_POST['geolng'],
+                    'tel1' => $request_input['tel1'],
+                    'tel2' => $request_input['tel2'],
+                    'comment' => $request_input['comment'],
+                    'type_msg' => (int)$request_input['type_msg'],
+                    'agenda_id' => $request_input['agenda_id'],
+                    'geolat' => (float)$request_input['geolat'],
+                    'geolng' => (float)$request_input['geolng'],
                     'date_update' => date('Y-m-d H:i:s')
                 );
 
-                if (Installator::update($arr, array('id_installator' => $_POST['id_installator']))) {
-                    CrmAction::create(array('id_crmuser' => $currentUser->id_crmuser, 'table_action' => 'Installators', 'id_entity' => $_POST['id_installator'], 'type_action' => 'MODIFICATION INSTALLATEUR', 'date_action' => date('Y-m-d H:i:s'), 'details_action' => Tool::arrayToStr($arr)));
+                if (Installator::update($arr, array('id_installator' => $request_input['id_installator']))) {
+                    CrmAction::create(array('id_crmuser' => $currentUser->id_crmuser, 'table_action' => 'Installators', 'id_entity' => $request_input['id_installator'], 'type_action' => 'MODIFICATION INSTALLATEUR', 'date_action' => date('Y-m-d H:i:s'), 'details_action' => Tool::arrayToStr($arr)));
                     successJSON(array('OK' => 'OK'));
                 }
             } else {
                 //creation mode
                 $arr = array(
-                    'installator_name' => $_POST['installator_name'],
-                    'first_name_ins' => $_POST['first_name_ins'],
-                    'last_name_ins' => $_POST['last_name_ins'],
-                    'siret_ins' => $_POST['siret_ins'],
-                    'adr1' => $_POST['adr1'],
-                    'adr2' => $_POST['adr2'],
-                    'post_code' => $_POST['post_code'],
-                    'city' => $_POST['city'],
+                    'installator_name' => $request_input['installator_name'],
+                    'first_name_ins' => $request_input['first_name_ins'],
+                    'last_name_ins' => $request_input['last_name_ins'],
+                    'siret_ins' => $request_input['siret_ins'],
+                    'adr1' => $request_input['adr1'],
+                    'adr2' => $request_input['adr2'],
+                    'post_code' => $request_input['post_code'],
+                    'city' => $request_input['city'],
                     'country' => 'FRANCE',
-                    'tel1' => $_POST['tel1'],
-                    'tel2' => $_POST['tel2'],
-                    'comment' => $_POST['comment'],
-                    'type_msg' => (int)$_POST['type_msg'],
-                    'agenda_id' => $_POST['agenda_id'],
-                    'geolat' => (float)$_POST['geolat'],
-                    'geolng' => (float)$_POST['geolng'],
+                    'tel1' => $request_input['tel1'],
+                    'tel2' => $request_input['tel2'],
+                    'comment' => $request_input['comment'],
+                    'type_msg' => (int)$request_input['type_msg'],
+                    'agenda_id' => $request_input['agenda_id'],
+                    'geolat' => (float)$request_input['geolat'],
+                    'geolng' => (float)$request_input['geolng'],
                     'date_create' => date('Y-m-d H:i:s')
                 );
 
@@ -1344,25 +1344,25 @@ function handleAction()
             break;
 
         case 'delete-installator':
-            if (!checkFields($_POST, array('idins')))
+            if (!checkFields($request_input, array('idins')))
                 errorJSON(array('message' => 'Informations incorrectes'));
 
-            $rdv = RDV::findOne(array('id_installator' => (int)$_POST['idins']));
+            $rdv = RDV::findOne(array('id_installator' => (int)$request_input['idins']));
             if ($rdv)
                 errorJSON(array('message' => 'Suppresion impossible, il existe des rendez vous rattachés à cet installateur'));
 
-            Installator::delete(array('id_installator' => (int)$_POST['idins']));
+            Installator::delete(array('id_installator' => (int)$request_input['idins']));
 
             successJSON(array('OK' => 'OK'));
             break;
 
         case 'generate-plan':
-            if (!checkFields($_POST, array('ide', 'data')))
+            if (!checkFields($request_input, array('ide', 'data')))
                 errorJSON(array('message' => 'Informations incorrectes'));
 
 
             $data = array();
-            parse_str($_POST['data'], $data);
+            parse_str($request_input['data'], $data);
             $dtst = strtotime(Tool::dmYtoYmd($data['startdt']));
             $dtend = strtotime(Tool::dmYtoYmd($data['enddt']));
             if ($dtst == 0 || $dtend == 0 || ($dtst > $dtend))
@@ -1389,7 +1389,7 @@ function handleAction()
                         $hrst = strtotime(Tool::addTimeStr($range['hour_start']), $curdt);
                         $hrend = strtotime(Tool::addTimeStr($range['hour_end']), $curdt);
                         Planning::create(array(
-                            'id_entrepot' => $_POST['ide'],
+                            'id_entrepot' => $request_input['ide'],
                             'date_planning' => date('Y-m-d', $curdt),
                             'hour_start' => date('H:i:s', $hrst),
                             'hour_end' => date('H:i:s', $hrend),
@@ -1407,21 +1407,21 @@ function handleAction()
             break;
 
         case 'update-tour':
-            //print_r($_POST); die;
-            if (!checkFields($_POST, array('id_entrepot', 'num_planning', 'date_rdv', 'rdv_start', 'rdv_end', 'duration', 'id_contact')))
+            //print_r($request_input); die;
+            if (!checkFields($request_input, array('id_entrepot', 'num_planning', 'date_rdv', 'rdv_start', 'rdv_end', 'duration', 'id_contact')))
                 errorJSON(array('message' => 'Informations incorrectes'));
 
-            $crnstart = date('H:i', strtotime('+' . (int)$_POST['crnstart'] . ' hour', strtotime($_POST['date_rdv'])));
-            $crnend = date('H:i', strtotime('+' . (int)$_POST['crnend'] . ' hour', strtotime($_POST['date_rdv'])));
-            IsoCreateRDV($_POST['id_entrepot'], $_POST['num_planning'], $_POST['date_rdv'], $_POST['rdv_start'], $_POST['rdv_end'], $_POST['duration'], $_POST['id_contact'], $crnstart, $crnend, $_POST['status'], '', $_POST['typerdv']);
+            $crnstart = date('H:i', strtotime('+' . (int)$request_input['crnstart'] . ' hour', strtotime($request_input['date_rdv'])));
+            $crnend = date('H:i', strtotime('+' . (int)$request_input['crnend'] . ' hour', strtotime($request_input['date_rdv'])));
+            IsoCreateRDV($request_input['id_entrepot'], $request_input['num_planning'], $request_input['date_rdv'], $request_input['rdv_start'], $request_input['rdv_end'], $request_input['duration'], $request_input['id_contact'], $crnstart, $crnend, $request_input['status'], '', $request_input['typerdv']);
             successJSON(array('OK' => 'OK'));
             break;
 
         case 'get-rdv-planning':
-            if (!checkFields($_POST, array('id_contact', 'dtfrom', 'duration')))
+            if (!checkFields($request_input, array('id_contact', 'dtfrom', 'duration')))
                 errorJSON(array('message' => 'Informations incorrectes'));
 
-            $contact = Contact::findOne(array('c.id_contact' => (int)$_POST['id_contact']));
+            $contact = Contact::findOne(array('c.id_contact' => (int)$request_input['id_contact']));
             if (!$contact)
                 errorJSON(array('message' => 'Paramètre invalide'));
 
@@ -1432,13 +1432,13 @@ function handleAction()
             $hrstart = 7;
             $hrmax = 20;
             //$impactdis = 1.28;
-            $dtstart = strtotime(Tool::dmYtoYmd($_POST['dtfrom']));
+            $dtstart = strtotime(Tool::dmYtoYmd($request_input['dtfrom']));
             $dtend = strtotime('+ ' . $nbdaytodis . ' day', $dtstart);
-            $duration = (int)$_POST['duration'];
-            $hr = isset($_POST['hr']) && (int)$_POST['hr'] > 0 ? (int)$_POST['hr'] : $hrstart;
-            $crndeb = (int)$_POST['crndeb'];
-            $crnend = (int)$_POST['crnend'];
-            $typerdv = (int)$_POST['typerdv'];
+            $duration = (int)$request_input['duration'];
+            $hr = isset($request_input['hr']) && (int)$request_input['hr'] > 0 ? (int)$request_input['hr'] : $hrstart;
+            $crndeb = (int)$request_input['crndeb'];
+            $crnend = (int)$request_input['crnend'];
+            $typerdv = (int)$request_input['typerdv'];
 
             $lstrdvs = array();
             $lstplans = array();
@@ -1693,10 +1693,10 @@ function handleAction()
             break;
 
         case 'calculate-rdv':
-            if (!checkFields($_POST, array('id', 'dts', 'dte')))
+            if (!checkFields($request_input, array('id', 'dts', 'dte')))
                 errorJSON(array('message' => 'Informations incorrectes'));
 
-            $rdv = RDV::findOne(array('id_rdv' => (int)$_POST['id']));
+            $rdv = RDV::findOne(array('id_rdv' => (int)$request_input['id']));
             if (!$rdv)
                 errorJSON(array('message' => 'Rendez vous inexistant'));
 
@@ -1704,8 +1704,8 @@ function handleAction()
             if (!$contact)
                 errorJSON(array('message' => 'Contact du RDV inexistant !! '));
 
-            //$rdvs = RDV::getBySimple("date_rdv = '".$_POST['dt']."' AND id_rdv <> ".$rdv->id_rdv);
-            $rdvs = RDV::getBySimple("date_rdv >= '" . $_POST['dts'] . "' AND date_rdv < '" . $_POST['dte'] . "' AND id_rdv <> " . $rdv->id_rdv);
+            //$rdvs = RDV::getBySimple("date_rdv = '".$request_input['dt']."' AND id_rdv <> ".$rdv->id_rdv);
+            $rdvs = RDV::getBySimple("date_rdv >= '" . $request_input['dts'] . "' AND date_rdv < '" . $request_input['dte'] . "' AND id_rdv <> " . $rdv->id_rdv);
             if (!$rdvs || $rdvs->num_rows == 0)
                 errorJSON(array('message' => 'Aucun rendez vous à comparer'));
 
@@ -1725,8 +1725,8 @@ function handleAction()
             }
 
             $lste = array();
-            //$resources = RDV::getEntrepotPlanning("r.date_rdv = '".$_POST['dt']."' AND r.id_rdv <> ".$rdv->id_rdv);
-            $resources = RDV::getEntrepotPlanning("r.date_rdv >= '" . $_POST['dts'] . "' AND r.date_rdv < '" . $_POST['dte'] . "' AND r.id_rdv <> " . $rdv->id_rdv);
+            //$resources = RDV::getEntrepotPlanning("r.date_rdv = '".$request_input['dt']."' AND r.id_rdv <> ".$rdv->id_rdv);
+            $resources = RDV::getEntrepotPlanning("r.date_rdv >= '" . $request_input['dts'] . "' AND r.date_rdv < '" . $request_input['dte'] . "' AND r.id_rdv <> " . $rdv->id_rdv);
             foreach ($resources as $res) {
                 $distance = Tool::getDistance($contact->geolat, $contact->geolng, $res['geolat'], $res['geolng']);
 
@@ -1747,46 +1747,46 @@ function handleAction()
             break;
 
         case 'get-planning':
-            if (!checkFields($_POST, array('start', 'end')))
+            if (!checkFields($request_input, array('start', 'end')))
                 errorJSON(array('message' => 'Informations incorrectes'));
 
-            $events = RDV::loadEvents($currentUser, $_POST['start'], $_POST['end'], (int)$_POST['id_entrepot'], (int)$_POST['id_installator'], $tot_rdv, $tot_101, $tot_102, $tot_103, $tot_cumac);
+            $events = RDV::loadEvents($currentUser, $request_input['start'], $request_input['end'], (int)$request_input['id_entrepot'], (int)$request_input['id_installator'], $tot_rdv, $tot_101, $tot_102, $tot_103, $tot_cumac);
             successJSON(array('OK' => 'OK', 'events' => $events, 'tot_rdv' => $tot_rdv, 'tot_101' => number_format($tot_101, 0, '.', ','), 'tot_102' => number_format($tot_102, 0, '.', ','), 'tot_103' => number_format($tot_103, 0, '.', ','), 'tot_cumac' => number_format($tot_cumac, 1, ',', ' ')));
             break;
 
         case 'get-resources-planning':
-            if (!checkFields($_POST, array('start', 'end')))
+            if (!checkFields($request_input, array('start', 'end')))
                 errorJSON(array('message' => 'Informations incorrectes'));
 
-            successJSON(array('OK' => 'OK', 'resources' => RDV::loadResources($currentUser, $_POST['start'], $_POST['end'], (int)$_POST['id_entrepot'], (int)$_POST['id_installator'])));
+            successJSON(array('OK' => 'OK', 'resources' => RDV::loadResources($currentUser, $request_input['start'], $request_input['end'], (int)$request_input['id_entrepot'], (int)$request_input['id_installator'])));
             break;
 
         case 'get-rdv':
-            if (!checkFields($_POST, array('id_contact', 'dtfrom', 'hrs')))
+            if (!checkFields($request_input, array('id_contact', 'dtfrom', 'hrs')))
                 errorJSON(array('message' => 'Informations incorrectes'));
 
-            $ct = Contact::findOne(array('c.id_contact' => (int)$_POST['id_contact']));
+            $ct = Contact::findOne(array('c.id_contact' => (int)$request_input['id_contact']));
             if (!$ct)
                 errorJSON(array('message' => 'Informations incorrectes'));
 
             $sets = (object)Setting::getGlobalSettings();
-            $res = Template::displayListNewRDV($ct, $sets, Tool::dmYtoYmd($_POST['dtfrom']), $_POST['hrs']);
+            $res = Template::displayListNewRDV($ct, $sets, Tool::dmYtoYmd($request_input['dtfrom']), $request_input['hrs']);
             successJSON(array('OK' => 'OK', 'html' => $res));
             break;
 
         case 'confirm-rdv':
-            if (!checkFields($_POST, array('idrdv', 'status')))
+            if (!checkFields($request_input, array('idrdv', 'status')))
                 errorJSON(array('message' => 'Informations incorrectes'));
 
             if (CrmUser::isTelepro($cuser) || CrmUser::isManager($cuser))
                 errorJSON(array('message' => 'Vous n\'avez pas les droits de faire cette opération'));
 
-            $rdv = RDV::findOne(array('id_rdv' => (int)$_POST['idrdv']));
+            $rdv = RDV::findOne(array('id_rdv' => (int)$request_input['idrdv']));
             if (!$rdv)
                 errorJSON(array('message' => 'Informations incorrectes'));
 
             $newst = 0;
-            if ((int)$_POST['status'] == 0)
+            if ((int)$request_input['status'] == 0)
                 $newst = 1;
             else
                 $newst = 0;
@@ -1794,7 +1794,7 @@ function handleAction()
             if ($newst == 1)
                 $arrupd['date_confirm'] = date('Y-m-d H:i');
 
-            if (RDV::update($arrupd, array('id_rdv' => (int)$_POST['idrdv']))) {
+            if (RDV::update($arrupd, array('id_rdv' => (int)$request_input['idrdv']))) {
                 CrmAction::create(array('id_crmuser' => $currentUser->id_crmuser, 'table_action' => 'Contacts', 'id_entity' => $rdv->id_contact, 'type_action' => 'MODIFICATION STATUT RENDEZ-VOUS', 'date_action' => date('Y-m-d H:i:s'), 'details_action' => $newst == 1 ? 'Confirmé' : 'A confirmer'));
 
                 //Envoi SMS au client si date +48H
@@ -1821,7 +1821,7 @@ function handleAction()
 									L\'équipe LSF Energie';
 
                             SMS::SendMessage($txt, $fullnum);
-                            RDV::update(array('sms_sent' => '1'), array('id_rdv' => (int)$_POST['idrdv']));
+                            RDV::update(array('sms_sent' => '1'), array('id_rdv' => (int)$request_input['idrdv']));
                         }
                     }
                 }
@@ -1831,30 +1831,30 @@ function handleAction()
             break;
 
         case 'confirm-sav':
-            if (!checkFields($_POST, array('idrdv', 'status')))
+            if (!checkFields($request_input, array('idrdv', 'status')))
                 errorJSON(array('message' => 'Informations incorrectes'));
 
-            $rdv = RDV::findOne(array('id_rdv' => (int)$_POST['idrdv']));
+            $rdv = RDV::findOne(array('id_rdv' => (int)$request_input['idrdv']));
             if (!$rdv)
                 errorJSON(array('message' => 'Informations incorrectes'));
 
             $newst = 0;
-            if ((int)$_POST['status'] == 0)
+            if ((int)$request_input['status'] == 0)
                 $newst = 1;
             else
                 $newst = 0;
             $arrupd = array('sav_done' => $newst);
-            if (RDV::update($arrupd, array('id_rdv' => (int)$_POST['idrdv']))) {
+            if (RDV::update($arrupd, array('id_rdv' => (int)$request_input['idrdv']))) {
                 CrmAction::create(array('id_crmuser' => $currentUser->id_crmuser, 'table_action' => 'Contacts', 'id_entity' => $rdv->id_contact, 'type_action' => 'MODIFICATION STATUT SAV', 'date_action' => date('Y-m-d H:i:s'), 'details_action' => $newst == 1 ? 'Effectué' : 'A effectuer'));
                 successJSON(array('OK' => 'OK'));
             }
             break;
 
         case 'delete-rdv':
-            if (!checkFields($_POST, array('idrdv')))
+            if (!checkFields($request_input, array('idrdv')))
                 errorJSON(array('message' => 'Informations incorrectes'));
 
-            $rdv = RDV::findOne(array('id_rdv' => (int)$_POST['idrdv']));
+            $rdv = RDV::findOne(array('id_rdv' => (int)$request_input['idrdv']));
             if (!$rdv)
                 errorJSON(array('message' => 'Informations incorrectes'));
 
@@ -1864,26 +1864,26 @@ function handleAction()
             break;
 
         case 'move-rdv':
-            if (!checkFields($_POST, array('idrdv', 'hrstart', 'idins')))
+            if (!checkFields($request_input, array('idrdv', 'hrstart', 'idins')))
                 errorJSON(array('message' => 'Informations incorrectes'));
 
-            $rdv = RDV::findOne(array('id_rdv' => (int)$_POST['idrdv']));
+            $rdv = RDV::findOne(array('id_rdv' => (int)$request_input['idrdv']));
             if (!$rdv)
                 errorJSON(array('message' => 'Informations incorrectes'));
 
-            if (strtotime($_POST['hrstart']) < time())
+            if (strtotime($request_input['hrstart']) < time())
                 errorJSON(array('message' => 'Vous ne pouvez deplacer un rendez vous dans le passé !'));
 
-            $dts = explode(' ', $_POST['hrstart']);
+            $dts = explode(' ', $request_input['hrstart']);
             if (count($dts) != 2)
                 errorJSON(array('message' => 'Informations incorrectes'));
 
             //$sets = (object)Setting::getGlobalSettings();
             $dt = $dts[0];
             $hr = $dts[1];
-            $hrend = date('H:i', strtotime('+ ' . $rdv->duration . ' hour', strtotime($_POST['hrstart'])));
+            $hrend = date('H:i', strtotime('+ ' . $rdv->duration . ' hour', strtotime($request_input['hrstart'])));
 
-            $entplan = explode('_', $_POST['idins']);
+            $entplan = explode('_', $request_input['idins']);
             $ident = $entplan[0];
             $numplan = $entplan[1];
             $typerdv = $entplan[2];
@@ -1893,12 +1893,12 @@ function handleAction()
             //Check if exist rdv
             /*on ne check plus si un rdv existe = autorise le chevauchement
             $existrdv = RDV::findExists($ident, $numplan, $dt, $hr, $hrend);
-            if ($existrdv && $existrdv->id_rdv != (int)$_POST['idrdv'])
+            if ($existrdv && $existrdv->id_rdv != (int)$request_input['idrdv'])
                 errorJSON(array('message' => 'Il existe déjà un rendez vous à cette période !'));
             */
 
             //Find planning (+ rdv) in this range
-            /*$plan = Planning::getPlanningCond("p.id_entrepot = " . (int)$_POST['idins'] . " AND p.date_planning = '" . $dt . "' AND ((hour_start <= '" . $hr . "' AND hour_end >= '" . $hr . "') OR (hour_start <= '" . $hrend . "' AND hour_end >= '" . $hrend . "')) ");
+            /*$plan = Planning::getPlanningCond("p.id_entrepot = " . (int)$request_input['idins'] . " AND p.date_planning = '" . $dt . "' AND ((hour_start <= '" . $hr . "' AND hour_end >= '" . $hr . "') OR (hour_start <= '" . $hrend . "' AND hour_end >= '" . $hrend . "')) ");
             if ($plan && (int)$plan->id_rdv > 0 && $plan->id_rdv != $rdv->id_rdv)
                 errorJSON(array('message' => 'Il existe deja un rendez vous sur la tranche choisie !'));
             else
@@ -1918,45 +1918,45 @@ function handleAction()
             break;
 
         case 'load-entrepot-planning':
-            if (!checkFields($_POST, array('dtstart', 'dtend')))
+            if (!checkFields($request_input, array('dtstart', 'dtend')))
                 errorJSON(array('message' => 'Informations incorrectes'));
 
-            $start = Tool::dmYtoYmd($_POST['dtstart']);
-            $end = Tool::dmYtoYmd($_POST['dtend']);
-            $conds = "r.date_rdv >= '" . $start . "' AND r.date_rdv <= '" . $end . "' AND r.type_rdv = 0 AND " . ((int)$_POST['attach'] == 1 ? 'r.id_installator = 0' : 'r.id_installator <> 0');
+            $start = Tool::dmYtoYmd($request_input['dtstart']);
+            $end = Tool::dmYtoYmd($request_input['dtend']);
+            $conds = "r.date_rdv >= '" . $start . "' AND r.date_rdv <= '" . $end . "' AND r.type_rdv = 0 AND " . ((int)$request_input['attach'] == 1 ? 'r.id_installator = 0' : 'r.id_installator <> 0');
             $entplans = RDV::getEntrepotPlanning($conds);
 
             successJSON(array('entplans' => ArrayLoader::loadAssoc($entplans)));
             break;
 
         case 'load-installator-entrepot':
-            if (!checkFields($_POST, array('entplan', 'dtstart', 'dtend')))
+            if (!checkFields($request_input, array('entplan', 'dtstart', 'dtend')))
                 errorJSON(array('message' => 'Informations incorrectes'));
 
-            $start = Tool::dmYtoYmd($_POST['dtstart']);
-            $end = Tool::dmYtoYmd($_POST['dtend']);
-            $id_entrepot = explode('_', $_POST['entplan'])[0];
-            $numplan = explode('_', $_POST['entplan'])[1];
+            $start = Tool::dmYtoYmd($request_input['dtstart']);
+            $end = Tool::dmYtoYmd($request_input['dtend']);
+            $id_entrepot = explode('_', $request_input['entplan'])[0];
+            $numplan = explode('_', $request_input['entplan'])[1];
             $entrepot = Entrepot::findOne(array('id_entrepot' => $id_entrepot));
             if (!$entrepot)
                 errorJSON(array('message' => 'Entrepot incorrect'));
 
-            $insts = Installator::findAvailable($start, $end, $entrepot->geolat, $entrepot->geolng, (int)$_POST['attach'] == 1, $entrepot->id_entrepot, $numplan);
+            $insts = Installator::findAvailable($start, $end, $entrepot->geolat, $entrepot->geolng, (int)$request_input['attach'] == 1, $entrepot->id_entrepot, $numplan);
             successJSON(array('insts' => ArrayLoader::loadAssoc($insts)));
             break;
 
         case 'attach-planning-installator':
-            if (!checkFields($_POST, array('entplan', 'id_installator', 'date_start', 'date_end')))
+            if (!checkFields($request_input, array('entplan', 'id_installator', 'date_start', 'date_end')))
                 errorJSON(array('message' => 'Informations incorrectes'));
 
-            $start = Tool::dmYtoYmd($_POST['date_start']);
-            $end = Tool::dmYtoYmd($_POST['date_end']);
-            $entplan = explode('_', $_POST['entplan']);
+            $start = Tool::dmYtoYmd($request_input['date_start']);
+            $end = Tool::dmYtoYmd($request_input['date_end']);
+            $entplan = explode('_', $request_input['entplan']);
             $ident = $entplan[0];
             $numplan = $entplan[1];
-            $modeattach = (int)$_POST['attach'] == 1;
+            $modeattach = (int)$request_input['attach'] == 1;
 
-            $inst = Installator::findOne(array('id_installator' => (int)$_POST['id_installator']));
+            $inst = Installator::findOne(array('id_installator' => (int)$request_input['id_installator']));
             if (!$inst)
                 errorJSON(array('message' => 'Installateur incorrecte'));
             if (($inst->type_msg == 0 || $inst->type_msg == 2) && $inst->agenda_id == '')
@@ -2120,11 +2120,11 @@ function handleAction()
             break;
 
         case 'mail-entrepot':
-            if (!checkFields($_POST, array('date_start', 'date_end')))
+            if (!checkFields($request_input, array('date_start', 'date_end')))
                 errorJSON(array('message' => 'Informations incorrectes'));
 
-            $start = Tool::dmYtoYmd($_POST['date_start']);
-            $end = Tool::dmYtoYmd($_POST['date_end']);
+            $start = Tool::dmYtoYmd($request_input['date_start']);
+            $end = Tool::dmYtoYmd($request_input['date_end']);
 
             /*$conds = "r.id_installator = 0 AND date_rdv BETWEEN '".$start."' AND '".$end."'";
             $rdvs = RDV::getBySimple($conds);
@@ -2146,9 +2146,9 @@ function handleAction()
             foreach ($rdvs as $rdv) {
                 if ($curent != $rdv['id_entrepot']) {
                     if ($curent != '') {
-                        $msg = 'FICHE DE PRODUIT A RETIRER DU ' . $_POST['date_start'] . ' AU ' . $_POST['date_end'] . '<br><br>' . $mail;
+                        $msg = 'FICHE DE PRODUIT A RETIRER DU ' . $request_input['date_start'] . ' AU ' . $request_input['date_end'] . '<br><br>' . $mail;
                         $vals = (object)array(
-                            'subject' => 'LSF ENERGIE - ' . $curentname . ' - Fiche de produit à retirer du ' . $_POST['date_start'] . ' AU ' . $_POST['date_end'],
+                            'subject' => 'LSF ENERGIE - ' . $curentname . ' - Fiche de produit à retirer du ' . $request_input['date_start'] . ' AU ' . $request_input['date_end'],
                             'entrepot_name' => $curentname,
                             'email' => $curemail,
                             'msg' => $msg
@@ -2181,9 +2181,9 @@ function handleAction()
                 $curemail = $rdv['email'];
             }
             if ($mail != '') {
-                $msg = 'FICHE DE PRODUIT A RETIRER DU ' . $_POST['date_start'] . ' AU ' . $_POST['date_end'] . '<br><br>' . $mail;
+                $msg = 'FICHE DE PRODUIT A RETIRER DU ' . $request_input['date_start'] . ' AU ' . $request_input['date_end'] . '<br><br>' . $mail;
                 $vals = (object)array(
-                    'subject' => 'LSF ENERGIE - ' . $curentname . ' - Fiche de produit à retirer du ' . $_POST['date_start'] . ' AU ' . $_POST['date_end'],
+                    'subject' => 'LSF ENERGIE - ' . $curentname . ' - Fiche de produit à retirer du ' . $request_input['date_start'] . ' AU ' . $request_input['date_end'],
                     'entrepot_name' => $curentname,
                     'email' => $curemail,
                     'msg' => $msg
@@ -2197,45 +2197,45 @@ function handleAction()
             break;
 
         case 'change-rdv-entrepot':
-            if (!checkFields($_POST, array('id_entrepot', 'id_entrepot_base', 'num_planning_base', 'dt')))
+            if (!checkFields($request_input, array('id_entrepot', 'id_entrepot_base', 'num_planning_base', 'dt')))
                 errorJSON(array('message' => 'Informations incorrectes'));
 
-            $rdvs = RDV::getBySimple("r.id_entrepot = " . (int)$_POST['id_entrepot_base'] . " AND r.num_planning = " . (int)$_POST['num_planning_base'] . " AND r.date_rdv = '" . $_POST['dt'] . "'");
+            $rdvs = RDV::getBySimple("r.id_entrepot = " . (int)$request_input['id_entrepot_base'] . " AND r.num_planning = " . (int)$request_input['num_planning_base'] . " AND r.date_rdv = '" . $request_input['dt'] . "'");
             if (!$rdvs || $rdvs->num_rows == 0)
                 errorJSON(array('message' => 'Aucun RDV à changer d\'entrepot!'));
 
-            $nextplan = RDV::getNextPlanning("r.id_entrepot = " . (int)$_POST['id_entrepot'] . " AND r.date_rdv = '" . $_POST['dt'] . "'");
+            $nextplan = RDV::getNextPlanning("r.id_entrepot = " . (int)$request_input['id_entrepot'] . " AND r.date_rdv = '" . $request_input['dt'] . "'");
 
             RDV::update(
-                array('id_entrepot' => (int)$_POST['id_entrepot'], 'num_planning' => $nextplan),
-                array('id_entrepot' => (int)$_POST['id_entrepot_base'], 'num_planning' => (int)$_POST['num_planning_base'], 'date_rdv' => $_POST['dt'])
+                array('id_entrepot' => (int)$request_input['id_entrepot'], 'num_planning' => $nextplan),
+                array('id_entrepot' => (int)$request_input['id_entrepot_base'], 'num_planning' => (int)$request_input['num_planning_base'], 'date_rdv' => $request_input['dt'])
             );
 
             successJSON(array('OK' => 'OK'));
             break;
 
         case 'get-direction':
-            if (!checkFields($_POST, array('deplat', 'deplng', 'deslat', 'deslng', 'tm')))
+            if (!checkFields($request_input, array('deplat', 'deplng', 'deslat', 'deslng', 'tm')))
                 errorJSON(array('message' => 'Informations incorrectes'));
 
-            $url = 'https://maps.googleapis.com/maps/api/directions/json?origin=' . $_POST['deplat'] . ',' . $_POST['deplng'] . '&destination=' . $_POST['deslat'] . ',' . $_POST['deslng'] . '&departure_time=' . $_POST['tm'] . '&key=AIzaSyArKK0Hvu_FtKgyvHkUUjyKOMK2Hmt9zY0';
+            $url = 'https://maps.googleapis.com/maps/api/directions/json?origin=' . $request_input['deplat'] . ',' . $request_input['deplng'] . '&destination=' . $request_input['deslat'] . ',' . $request_input['deslng'] . '&departure_time=' . $request_input['tm'] . '&key=AIzaSyArKK0Hvu_FtKgyvHkUUjyKOMK2Hmt9zY0';
             $info = Tool::getCurl($url);
             successJSON(array('gmap' => $info));
             break;
 
         case 'get-map-rdvs':
-            if (!checkFields($_POST, array('dt', 'id_entrepot')))
+            if (!checkFields($request_input, array('dt', 'id_entrepot')))
                 errorJSON(array('message' => 'Informations incorrectes'));
 
             $steps = array();
-            $conds = "r.date_rdv = '" . Tool::dmYtoYmd($_POST['dt']) . "'";
-            $conds .= (int)$_POST['id_entrepot'] > 0 ? " AND r.id_entrepot = " . (int)$_POST['id_entrepot'] : '';
+            $conds = "r.date_rdv = '" . Tool::dmYtoYmd($request_input['dt']) . "'";
+            $conds .= (int)$request_input['id_entrepot'] > 0 ? " AND r.id_entrepot = " . (int)$request_input['id_entrepot'] : '';
             $rdvs = RDV::getWithSteps($conds, $steps);
             successJSON(array('rdvs' => ArrayLoader::loadAssoc($rdvs), 'steps' => $steps));
             break;
 
         case 'get-dash-park':
-            $conds = isset($_POST['idst']) && $_POST['idst'] != '' ? array('id_statuscont' => (int)$_POST['idst']) : '';
+            $conds = isset($request_input['idst']) && $request_input['idst'] != '' ? array('id_statuscont' => (int)$request_input['idst']) : '';
             $contacts = Contact::getAllForMap($conds);
             $installators = Installator::getAll();
             $entrepots = Entrepot::getAll();
@@ -2249,7 +2249,7 @@ function handleAction()
             $flds = array(
                 'DISTANCE_RDV', 'DISTANCE_RDV_MAX', 'DISTANCE_PROX', 'TX_TVA', 'STATUS_MISS_CONFIRM', 'GOOGLE_AGENDA_SENDER'
             );
-            if (!checkFields($_POST, $flds))
+            if (!checkFields($request_input, $flds))
                 errorJSON(array('message' => 'Informations incorrectes'));
 
             $flds[] = 'CLICKSEND_KEY';
@@ -2257,13 +2257,13 @@ function handleAction()
             $flds[] = 'SEND_SMS_CUST';
 
             foreach ($flds as $fld)
-                if (!Setting::updateGlobalSettings($fld, $_POST[$fld]))
-                    errorJSON(array('message' => 'Error on update settings (' . $fld . ' => ' . $_POST[$fld] . ')'));
+                if (!Setting::updateGlobalSettings($fld, $request_input[$fld]))
+                    errorJSON(array('message' => 'Error on update settings (' . $fld . ' => ' . $request_input[$fld] . ')'));
 
-            CrmAction::create(array('id_crmuser' => $currentUser->id_crmuser, 'table_action' => 'Settings', 'id_entity' => '0', 'type_action' => 'MODIFICATION PARAMETRAGE GENERAL', 'date_action' => date('Y-m-d H:i:s'), 'details_action' => Tool::arrayToStr($_POST)));
+            CrmAction::create(array('id_crmuser' => $currentUser->id_crmuser, 'table_action' => 'Settings', 'id_entity' => '0', 'type_action' => 'MODIFICATION PARAMETRAGE GENERAL', 'date_action' => date('Y-m-d H:i:s'), 'details_action' => Tool::arrayToStr($request_input)));
             successJSON(array('OK' => 'OK'));
             break;
     }
 }
 
-handleAction();
+handleAction($_POST);

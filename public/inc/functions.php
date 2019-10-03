@@ -248,3 +248,16 @@ function IsoRemoveRDV($rdv)
     if (RDV::delete(array('id_rdv' => $rdv->id_rdv)))
         CrmAction::create(array('id_crmuser' => $currentUser->id_crmuser, 'table_action' => 'Contacts', 'id_entity' => $rdv->id_contact, 'type_action' => 'SUPPRESSION RENDEZ-VOUS', 'date_action' => date('Y-m-d H:i:s')));
 }
+
+function _session($key = null, $default = null)
+{
+    if ($key === null) {
+        return $_SESSION;
+    }
+
+    if (is_array($key)) {
+        $_SESSION = array_merge($_SESSION, $key);
+    }
+
+    return $_SESSION[$key] ?? $default;
+}
