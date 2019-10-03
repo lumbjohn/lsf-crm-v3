@@ -1,7 +1,6 @@
 <?php
 
 include './inc/isobl.php';
-include './inc/functions.php';
 
 function handleAction($request_input)
 {
