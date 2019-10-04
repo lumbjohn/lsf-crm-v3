@@ -2,27 +2,20 @@
 
 namespace App;
 
-$host = env('DB_HOST');
-$login = env('DB_USERNAME');
-$password = env('DB_PASSWORD');
-$base = env('DB_DATABASE');
-
-$db = mysqli_connect($host, $login, $password);
-mysqli_select_db($db, $base);
-mysqli_query($db, 'SET NAMES UTF8');
+use Illuminate\Support\Facades\DB;
 
 class DbQuery
 {
     public static function query($tb, $fld, $conds = '', $returnone = false, $orderby = '', $groupby = '', $lmtst = 0, $lmtend = 0)
     {
-        global $db;
+        // global $db;
         $strconds = '';
         if (!empty($conds)) {
             $i = 0;
 
             foreach ($conds as $k => $v) {
                 $strconds .= ($i == 0) ? ' WHERE ' : ' AND ';
-                $strconds .= $k . ' = \'' . mysqli_real_escape_string($db, $v) . '\' ';
+                $strconds .= $k . ' = \'' . addslashes($v) . '\' ';
                 $i++;
             }
         }
@@ -61,16 +54,16 @@ class DbQuery
 
     public static function querySQL($sql, $returnone = false)
     {
-        global $db;
+        // global $db;
         //echo '##'.$sql;
         //error_log("INFO : ##".$sql.PHP_EOL);
-        $res = mysqli_query($db, $sql);
+        $res = DB::statement(DB::raw($sql)); // $res = mysqli_query($db, $sql);
         if (!$res)
             return false;
 
         //try{
         if ($returnone)
-            return mysqli_fetch_object($res);
+            return $res[0]; // return mysqli_fetch_object($res);
         else
             return $res;
         /*} catch(Exception $e){
@@ -81,7 +74,7 @@ class DbQuery
 
     public static function insert($tb, $flds)
     {
-        global $db;
+        // global $db;
         $sql = ' INSERT INTO ' . $tb;
         $fl = '';
         $vl = '';
@@ -91,7 +84,7 @@ class DbQuery
             $fl .= $k;
 
             $vl .= ($i == 0) ? ' ( ' : ' , ';
-            $vl .= '\'' . mysqli_real_escape_string($db, $v) . '\'';
+            $vl .= '\'' . addslashes($v) . '\'';
 
             $i++;
         }
@@ -99,11 +92,11 @@ class DbQuery
 
         //echo $sql;
         //error_log("INFO : INS##".$sql.PHP_EOL);
-        $res = mysqli_query($db, $sql);
+        $res = DB::insert(DB::raw($sql)); // mysqli_query($db, $sql);
         if (!$res)
             return false;
 
-        $id = mysqli_insert_id($db);
+        $id = DB::getPdo()->lastInsertId(); // mysqli_insert_id($db);
         if ($id && $id > 0)
             return $id;
         else
@@ -113,57 +106,57 @@ class DbQuery
 
     public static function update($tb, $flds, $wh)
     {
-        global $db;
+        // global $db;
         $sql = ' UPDATE ' . $tb . ' SET ';
         $i = 0;
         foreach ($flds as $k => $v) {
-            $sql .= ($i == 0 ? '' : ',') . $k . '=\'' . mysqli_real_escape_string($db, $v) . '\'';
+            $sql .= ($i == 0 ? '' : ',') . $k . '=\'' . addslashes($v) . '\'';
             $i++;
         }
 
         $sql .= ' WHERE ';
         $i = 0;
         foreach ($wh as $k => $v) {
-            $sql .= ($i == 0 ? '' : ' AND ') . $k . '=\'' . mysqli_real_escape_string($db, $v) . '\'';
+            $sql .= ($i == 0 ? '' : ' AND ') . $k . '=\'' . addslashes($v) . '\'';
             $i++;
         }
 
         //echo $sql;
         //error_log("INFO : UPD##".$sql.PHP_EOL);
-        $res = mysqli_query($db, $sql);
+        $res = DB::update(DB::raw($sql)); // $res = mysqli_query($db, $sql);
         return !$res ? false : true;
     }
 
     public static function updateSimple($tb, $flds, $wh)
     {
-        global $db;
+        // global $db;
         $sql = ' UPDATE ' . $tb . ' SET ' . $flds . ' WHERE ' . $wh;
-        $res = mysqli_query($db, $sql);
+        $res = DB::update(DB::raw($sql)); // mysqli_query($db, $sql);
         //echo $sql.'<br><br>';
         return !$res ? false : true;
     }
 
     public static function delete($tb, $wh)
     {
-        global $db;
+        // global $db;
         $sql = ' DELETE FROM ' . $tb . ' WHERE ';
         $i = 0;
         foreach ($wh as $k => $v) {
-            $sql .= ($i == 0 ? '' : ' AND ') . $k . '=\'' . mysqli_real_escape_string($db, $v) . '\'';
+            $sql .= ($i == 0 ? '' : ' AND ') . $k . '=\'' . addslashes($v) . '\'';
             $i++;
         }
 
         //echo $sql;
-        $res = mysqli_query($db, $sql);
+        $res = DB::delete(DB::raw($sql)); // mysqli_query($db, $sql);
 
         return !$res ? false : true;
     }
 
     public static function deleteSimple($tb, $wh)
     {
-        global $db;
+        // global $db;
         $sql = ' DELETE FROM ' . $tb . ' WHERE ' . $wh;
-        $res = mysqli_query($db, $sql);
+        $res = DB::delete(DB::raw($sql)); // mysqli_query($db, $sql);
         //echo $sql.'<br><br>';
         return !$res ? false : true;
     }

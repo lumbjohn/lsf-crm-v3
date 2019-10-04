@@ -15,4 +15,4 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-Route::post('/crmajax.php', 'CrmAjaxController@handleAction');
+Route::post('/crmajax.php', 'CrmAjaxController@handleAction'); // TODO: add auth middleware

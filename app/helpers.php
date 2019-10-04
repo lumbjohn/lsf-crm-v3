@@ -263,7 +263,9 @@ if (!function_exists('IsoRemoveRDV')) {
 if (!function_exists('_session')) {
     function _session($key = null, $default = null)
     {
+        // if (session_status() === PHP_SESSION_NONE) {
         session_start();
+        // }
 
         if ($key === null) {
             return $_SESSION;
@@ -291,5 +293,18 @@ if (!function_exists('filename')) {
         // Extract filename from URL
         $parts = explode('/', $url);
         return end($parts);
+    }
+}
+
+if (!function_exists('dtformat')) {
+    function dtformat($dt)
+    {
+        try {
+            $when = new DateTime($dt);
+            $dt = $when->format('Y-m-d H:i:s');
+            return $dt;
+        } catch (Exception $e) {
+            return false;
+        }
     }
 }
